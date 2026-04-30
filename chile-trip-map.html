@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chile Trip 2026 — Interactive Travel Map</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <style>
+    /* ─── TOKENS ─────────────────────────────────────── */
+    :root {
+      --bg:        #F7F6F2;
+      --surface:   #FFFFFF;
+      --surface2:  #EFEDE8;
+      --border:    rgba(0,0,0,0.08);
+      --border2:   rgba(0,0,0,0.15);
+      --text:      #1C1B18;
+      --text2:     #5E5D59;
+      --text3:     #9C9A94;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --sidebar-w: 390px;
+      --fav-w:     310px;
+
+      --family:    #D85A30;
+      --adventure: #534AB7;
+      --wine:      #BA7517;
+      --hidden:    #1D9E75;
+      --claude:    #0284C7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #18171A;
+        --surface: #232229;
+        --surface2:#2C2B31;
+        --border:  rgba(255,255,255,0.08);
+        --border2: rgba(255,255,255,0.15);
+        --text:    #EDEBE6;
+        --text2:   #A4A19A;
+        --text3:   #6E6C66;
+      }
+    }
+
+    /* ─── RESET ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ─── APP SHELL ──────────────────────────────────── */
+    .app { display: flex; height: 100vh; }
+
+    /* ─── SHARED PANEL CHROME ────────────────────────── */
+    .panel-hd {
+      padding: 16px 20px 13px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      margin-bottom: 1px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .panel-sub { font-size: 11px; color: var(--text3); }
+
+    /* ─── LEFT SIDEBAR ───────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+    }
+    .s-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .s-title  { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 2px; display: flex; align-items: center; gap: 9px; }
+    .s-sub    { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+    .stat-row { display: flex; gap: 7px; }
+    .stat     { flex: 1; background: var(--surface2); border-radius: var(--radius-sm); padding: 7px 8px; text-align: center; }
+    .stat-val { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.1; }
+    .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+    /* Filters */
+    .s-filters {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .filt {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .filt:hover { background: var(--border); }
+    .filt.on   { background: var(--text); color: var(--surface); border-color: var(--text); }
+    .filt-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Sidebar body */
+    .s-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* Destination list */
+    .dest-list { flex: 1; overflow-y: auto; }
+    .dest-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 18px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .dest-item:hover, .dest-item.active { background: var(--surface2); }
+    .dest-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .dest-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+    .dest-sum  { font-size: 11px; color: var(--text3); margin-top: 2px; line-height: 1.4;
+                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .dest-tag  { margin-left: auto; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px;
+                 flex-shrink: 0; white-space: nowrap; align-self: flex-start; margin-top: 1px; }
+
+    /* Detail panel */
+    .detail-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .detail-panel.visible { display: flex; }
+    .detail-back {
+      padding: 9px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      cursor: pointer; color: var(--text3); font-size: 12px;
+      background: none; border: none; padding: 0;
+    }
+    .back-btn:hover { color: var(--text); }
+    .fav-btn {
+      display: flex; align-items: center; gap: 5px;
+      cursor: pointer; font-size: 12px; font-weight: 500;
+      background: none; border: 1px solid var(--border2);
+      border-radius: 20px; padding: 4px 11px; color: var(--text2);
+      transition: all 0.15s;
+    }
+    .fav-btn:hover { background: var(--surface2); }
+    .fav-btn.saved { border-color: #E03; color: #E03; background: #fff0f0; }
+    @media (prefers-color-scheme: dark) { .fav-btn.saved { background: #2a1010; } }
+
+    .detail-scroll { flex: 1; overflow-y: auto; padding: 16px 18px 28px; }
+    .d-name  { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; line-height: 1.2; margin-bottom: 3px; }
+    .d-sub   { font-size: 12px; color: var(--text3); margin-bottom: 9px; }
+    .d-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 10px; margin-bottom: 13px; }
+    .d-summary { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 16px;
+                 padding: 11px 13px; background: var(--surface2); border-radius: var(--radius-md); }
+    .d-section { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+                 color: var(--text3); margin-bottom: 7px; }
+    .d-list { list-style: none; margin-bottom: 14px; }
+    .d-list li { display: flex; gap: 9px; padding: 5px 0; font-size: 13px; color: var(--text2);
+                 border-bottom: 1px solid var(--border); line-height: 1.45; }
+    .d-list li:last-child { border: none; }
+    .d-bullet { flex-shrink: 0; width: 5px; height: 5px; border-radius: 50%; margin-top: 6px; }
+    .d-tip { border-left: 3px solid; padding: 8px 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+             font-size: 12px; color: var(--text2); background: var(--surface2); margin-bottom: 9px; }
+    .d-tip-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .d-wx { font-size: 11px; color: var(--text3); margin-bottom: 16px; }
+    .nearby-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius-sm);
+                   border: 1px solid var(--border); cursor: pointer; margin-bottom: 6px; transition: background 0.1s; }
+    .nearby-item:hover { background: var(--surface2); }
+    .nearby-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .nearby-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .nearby-sub  { font-size: 11px; color: var(--text3); }
+    .nearby-arr  { color: var(--text3); margin-left: auto; }
+
+    /* Sidebar legend */
+    .s-legend {
+      padding: 9px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .leg-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text3); }
+    .leg-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ─── MAP WRAPPER ────────────────────────────────── */
+    .map-wrap { flex: 1; position: relative; overflow: hidden; }
+    #map { width: 100%; height: 100%; }
+
+    /* Favourites toggle pill */
+    .fav-toggle {
+      position: absolute;
+      bottom: 28px;
+      right: 16px;
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: 24px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      transition: box-shadow 0.15s, transform 0.12s;
+    }
+    .fav-toggle:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.22); transform: translateY(-1px); }
+    .fav-toggle.has-favs { color: #E03; }
+    .fav-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #E03; color: #fff; font-size: 10px; font-weight: 700;
+      display: none;
+    }
+    .fav-toggle.has-favs .fav-count { display: inline-flex; }
+
+    /* ─── FAVOURITES RIGHT PANEL ─────────────────────── */
+    .fav-panel {
+      width: var(--fav-w);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+      transform: translateX(var(--fav-w));
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .fav-panel.open { transform: translateX(0); }
+
+    .fav-hd {
+      padding: 16px 18px 13px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .fav-hd-left {}
+    .fav-hd-title { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; display: flex; align-items: center; gap: 7px; }
+    .fav-hd-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .fav-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-size: 18px; line-height: 1;
+      padding: 2px 4px; border-radius: 4px;
+      transition: color 0.1s;
+    }
+    .fav-close:hover { color: var(--text); }
+
+    .fav-actions {
+      padding: 9px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fav-action-lbl { font-size: 11px; color: var(--text3); }
+    .fav-clear {
+      font-size: 11px; padding: 3px 9px; border-radius: 20px;
+      border: 1px solid var(--border2); background: none;
+      color: var(--text3); cursor: pointer;
+      transition: all 0.12s;
+    }
+    .fav-clear:hover { color: #E03; border-color: #E03; background: #fff0f0; }
+    @media (prefers-color-scheme: dark) { .fav-clear:hover { background: #2a1010; } }
+
+    .fav-list { flex: 1; overflow-y: auto; }
+
+    .fav-empty {
+      padding: 3rem 20px;
+      text-align: center;
+      color: var(--text3);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .fav-empty-icon { font-size: 28px; display: block; margin-bottom: 10px; opacity: 0.5; }
+
+    .fav-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .fav-item:hover { background: var(--surface2); }
+    .fav-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .fav-info { flex: 1; min-width: 0; }
+    .fav-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+    .fav-cat  { font-size: 10px; color: var(--text3); margin-top: 2px; }
+    .fav-sum  { font-size: 11px; color: var(--text3); margin-top: 3px; line-height: 1.4;
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fav-remove {
+      flex-shrink: 0;
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-size: 16px; line-height: 1;
+      padding: 2px 4px; border-radius: 4px;
+      transition: color 0.1s;
+      align-self: center;
+    }
+    .fav-remove:hover { color: #E03; }
+
+    .fav-footer {
+      padding: 11px 18px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text3);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* ─── LEAFLET OVERRIDES ──────────────────────────── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 11px !important;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.16) !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      border: none !important;
+    }
+    .leaflet-popup-content { margin: 0 !important; width: 230px !important; }
+    .leaflet-popup-tip-container { display: none !important; }
+    .pop-inner { padding: 13px 15px 12px; font-family: inherit; }
+    .pop-name  { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .pop-sub   { font-size: 11px; color: #888; margin-bottom: 10px; line-height: 1.4; }
+    .pop-btn   { display: block; width: 100%; padding: 7px; border-radius: var(--radius-sm); border: none;
+                 cursor: pointer; font-size: 12px; font-weight: 500; color: white; text-align: center;
+                 transition: opacity 0.15s; }
+    .pop-btn:hover { opacity: 0.86; }
+
+    /* ─── MOBILE ─────────────────────────────────────── */
+    @media (max-width: 780px) {
+      .app { flex-direction: column; }
+      .sidebar { width: 100%; height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
+      .map-wrap { height: 55vh; flex: none; }
+      .fav-panel { position: fixed; top: 0; right: 0; height: 100vh; z-index: 1000; box-shadow: -4px 0 20px rgba(0,0,0,0.15); }
+      :root { --sidebar-w: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══════════ LEFT SIDEBAR ══════════ -->
+  <div class="sidebar">
+    <div class="s-header">
+      <div class="s-title">
+        <svg width="30" height="20" viewBox="0 0 30 20" xmlns="http://www.w3.org/2000/svg" style="border-radius:3px;flex-shrink:0;">
+          <rect width="30" height="20" fill="#D52B1E"/>
+          <rect width="30" height="10" y="10" fill="#FFFFFF"/>
+          <rect width="12" height="10" fill="#003DA5"/>
+          <polygon points="6,2.3 7.2,5.9 11,5.9 8,8 9.1,11.6 6,9.5 2.9,11.6 4,8 1,5.9 4.8,5.9" fill="#FFFFFF"/>
+        </svg>
+        Chile Trip — Nov &amp; Dec 2026
+      </div>
+      <div class="s-sub">8 weeks · Family, adventure, wine, hidden gems &amp; more</div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-val" id="statCount">20</div><div class="stat-lbl">destinations</div></div>
+        <div class="stat"><div class="stat-val">8</div><div class="stat-lbl">weeks</div></div>
+        <div class="stat"><div class="stat-val">4</div><div class="stat-lbl">family stops</div></div>
+        <div class="stat"><div class="stat-val">4,300<span style="font-size:10px;font-weight:400">km</span></div><div class="stat-lbl">north to south</div></div>
+      </div>
+    </div>
+
+    <div class="s-filters">
+      <button class="filt on"  onclick="doFilter('all',this)">All</button>
+      <button class="filt" onclick="doFilter('family',this)">
+        <span class="filt-dot" style="background:var(--family)"></span>Family
+      </button>
+      <button class="filt" onclick="doFilter('adventure',this)">
+        <span class="filt-dot" style="background:var(--adventure)"></span>Adventure
+      </button>
+      <button class="filt" onclick="doFilter('wine',this)">
+        <span class="filt-dot" style="background:var(--wine)"></span>Wine &amp; food
+      </button>
+      <button class="filt" onclick="doFilter('hidden',this)">
+        <span class="filt-dot" style="background:var(--hidden)"></span>Hidden gems
+      </button>
+      <button class="filt" onclick="doFilter('claude',this)">
+        <span class="filt-dot" style="background:var(--claude)"></span>Claude suggests
+      </button>
+    </div>
+
+    <div class="s-body">
+      <div class="dest-list" id="destList"></div>
+      <div class="detail-panel" id="detailPanel">
+        <div class="detail-back">
+          <button class="back-btn" onclick="showList()">← All destinations</button>
+          <button class="fav-btn" id="favBtn" onclick="toggleFavItem()">♡ Save</button>
+        </div>
+        <div class="detail-scroll" id="detailContent"></div>
+      </div>
+    </div>
+
+    <div class="s-legend">
+      <div class="leg-item"><span class="leg-dot" style="background:var(--family)"></span>Family</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--adventure)"></span>Adventure</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--wine)"></span>Wine</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--hidden)"></span>Hidden</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--claude)"></span>Claude suggests</div>
+    </div>
+  </div>
+
+  <!-- ══════════ MAP ══════════ -->
+  <div class="map-wrap">
+    <div id="map"></div>
+    <button class="fav-toggle" id="favToggle" onclick="openFavPanel()">
+      ♡ Favourites
+      <span class="fav-count" id="favCount">0</span>
+    </button>
+  </div>
+
+  <!-- ══════════ RIGHT — FAVOURITES PANEL ══════════ -->
+  <div class="fav-panel" id="favPanel">
+    <div class="fav-hd">
+      <div class="fav-hd-left">
+        <div class="fav-hd-title">♡ Favourites</div>
+        <div class="fav-hd-sub">Your saved destinations</div>
+      </div>
+      <button class="fav-close" onclick="closeFavPanel()">✕</button>
+    </div>
+    <div class="fav-actions">
+      <span class="fav-action-lbl" id="favActionLbl">0 saved</span>
+      <button class="fav-clear" onclick="clearFavs()">Clear all</button>
+    </div>
+    <div class="fav-list" id="favList">
+      <div class="fav-empty">
+        <span class="fav-empty-icon">♡</span>
+        Click <strong>Save</strong> on any destination<br>to build your shortlist here.
+      </div>
+    </div>
+    <div class="fav-footer">Saved across sessions via local storage</div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DATA & LOGIC
+     ══════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<script>
+
+/* ════════════════════════════════════════════════════
+   CATEGORY CONFIG
+   ════════════════════════════════════════════════════ */
+const CATS = {
+  family:    { color: '#D85A30', label: 'Family stop',          bg: '#FAECE7', fg: '#993C1D' },
+  adventure: { color: '#534AB7', label: 'Adventure & nature',   bg: '#EEEDFE', fg: '#3C3489' },
+  wine:      { color: '#BA7517', label: 'Wine & food',           bg: '#FAEEDA', fg: '#854F0B' },
+  hidden:    { color: '#1D9E75', label: 'Hidden gem',            bg: '#E1F5EE', fg: '#0F6E56' },
+  claude:    { color: '#0284C7', label: 'Claude suggests',       bg: '#E0F2FE', fg: '#0369A1' }
+};
+
+/* ════════════════════════════════════════════════════
+   DESTINATIONS
+   ────────────────────────────────────────────────────
+   To add a new place, paste a copy of any entry below
+   and fill in the fields. Categories:
+     family | adventure | wine | hidden | claude
+   ════════════════════════════════════════════════════ */
+const DESTINATIONS = [
+
+  // ── FAMILY STOPS ──────────────────────────────────
+  {
+    id: 'santiago', name: 'Santiago', cat: 'family',
+    sub: 'Metropolitan Region · Capital city & trip hub',
+    lat: -33.4489, lng: -70.6693,
+    summary: "Chile's cosmopolitan capital spreads across a wide Andean valley framed by snowcapped peaks. Walkable, culturally rich and full of excellent food — it's your main logistical hub for the whole trip and worth at least two or three days in its own right.",
+    highlights: [
+      'Cerro San Cristóbal — sweeping Andes panorama & cable car',
+      'Sky Costanera: tallest observation deck in South America',
+      'Mercado Central — the city\'s legendary fresh seafood hall',
+      'Barrio Lastarria & Bellavista: art, craft beer, restaurants & nightlife',
+      'Museum of Memory & Human Rights (deeply moving, unmissable)',
+      'Museo de Arte Precolombino — world-class pre-Columbian collection',
+      'La Chascona: Pablo Neruda\'s eccentric Santiago home, now a museum',
+      'Plaza de Armas & Cerro Santa Lucía — the city\'s 1541 founding site',
+      'December: Santiago a Mil Theatre Festival & Christmas markets'
+    ],
+    tip: 'Perfect base to start and end the trip. Direct domestic flights to Atacama, Punta Arenas & Puerto Montt.',
+    weather: 'Nov 22°C pleasant spring / Dec 28°C dry summer.'
+  },
+  {
+    id: 'svtt', name: 'San Vicente de Tagua Tagua', cat: 'family',
+    sub: 'O\'Higgins Region · Wine country & ancient history',
+    lat: -34.4358, lng: -71.0878,
+    summary: "A quietly beautiful O'Higgins Region town surrounded by some of Chile's finest wine country, hiding extraordinary pre-Columbian archaeology beneath its vine-covered hills. Just 90 minutes from Santiago and far off the tourist trail.",
+    highlights: [
+      'Gateway to Colchagua Valley — world-class wine on your doorstep',
+      'Laguna de Tagua Tagua nature trails & birdwatching wetlands',
+      'Tagua Tagua archaeological site — evidence of human presence 12,000 years ago',
+      'Cuchipuy pre-Columbian cemetery — one of Chile\'s oldest (11,000 yrs)',
+      'Town Plaza — one of Chile\'s most beautiful, lush & serene squares',
+      'Vendimia wine harvest festival events throughout the season'
+    ],
+    tip: 'Just 1.5h from Santiago by car. A wonderful combination of family, archaeology and wine country.',
+    weather: 'Nov: warm spring, perfect for vineyard visits.'
+  },
+  {
+    id: 'villarrica', name: 'Villarrica / Pucón', cat: 'family',
+    sub: 'Araucanía · Adventure capital of the Lake District',
+    lat: -39.2737, lng: -71.9580,
+    summary: "Twin lakeside towns in the shadow of one of the world's most consistently active volcanoes, where the landscape feels literally alive. The undisputed adventure capital of Chile — every outdoor sport imaginable is available within 30 minutes.",
+    highlights: [
+      'Summit active Villarrica Volcano — peer into the lava crater (4–6h climb)',
+      'Villarrica National Park: 17 marked trails through ancient Araucaria forest',
+      'Lake Villarrica: kayaking, sailing, water skiing & panoramic boat tours',
+      'Whitewater rafting on the Class IV Trancura River',
+      'Ancient Araucaria (monkey puzzle) trees — individual specimens over 1,000 years old',
+      'Paragliding & zip-lining over lake and volcano views',
+      'Horseback riding through Andean forest & meadows'
+    ],
+    tip: 'Book the volcano summit weeks in advance — groups are capped and weather-dependent. Every adventure sport is available in Pucón.',
+    weather: 'Dec: prime summer — best conditions for all outdoor activities.'
+  },
+  {
+    id: 'chiloe', name: 'Chiloé Island (Castro)', cat: 'family',
+    sub: 'Los Lagos · Magical & utterly unique archipelago',
+    lat: -42.4817, lng: -73.7638,
+    summary: "A rain-misted archipelago with a culture entirely its own — Mapuche roots, Spanish colonial architecture and a seafaring tradition unlike anywhere else in South America. The UNESCO wooden churches, stilted palafito houses and fire-pit curanto feasts are unlike anything else on the continent.",
+    highlights: [
+      '16 UNESCO World Heritage wooden churches — the Route of the Churches road trip',
+      'Castro palafitos: iconic multi-colored stilt houses perched over the sea',
+      'Puñihuil: only place on Earth where Magellanic & Humboldt penguins coexist',
+      'Chiloé National Park: rugged Pacific coastline & native temperate forest',
+      'Curanto en hoyo: slow fire-pit feast of meats, seafood & milcao potato cakes',
+      'Dalcahue artisan market: hand-woven wool, baskets & crafts every Sunday',
+      'Tantauco Park: vast, pristine temperate rainforest & near-total silence'
+    ],
+    tip: 'Ferry Pargua → Chacão runs every 20 min and takes 30 min. Nov offers ideal weather with fewer crowds than peak Jan–Feb.',
+    weather: 'Nov: quieter warming spring. Dec: peak season begins — book accommodation early.'
+  },
+
+  // ── ADVENTURE & NATURE ────────────────────────────
+  {
+    id: 'atacama', name: 'San Pedro de Atacama', cat: 'adventure',
+    sub: 'Antofagasta · High desert altiplano',
+    lat: -22.9087, lng: -68.1997,
+    summary: "The driest non-polar desert on Earth, so extreme it has served as a Mars analogue for NASA. Otherworldly landscapes by day and the world's clearest night skies after dark — a destination that permanently resets your sense of scale.",
+    highlights: [
+      'Valle de la Luna at sunset — sand, rock and salt bathed in red-gold light',
+      'El Tatio geysers erupting at dawn at 4,500m altitude — bring a warm jacket',
+      'Salar de Atacama: flamingos wading through vast pink salt flats',
+      'Laguna Cejar: float effortlessly in a bright turquoise salt lake',
+      'Stargazing — world\'s clearest skies; several observatories open to visitors',
+      'Ancient cave art (petroglifos) & Inca roads threading through the desert',
+      'Biking, horseback riding & sandboarding excursions'
+    ],
+    tip: 'Fly Santiago → Calama (~2h), then 1h drive. Plan 4–5 nights minimum. Rest on arrival — altitude sickness at 2,400m is real.',
+    weather: 'Nov–Dec: dry, hot days ~30°C, cold nights ~5°C. Near-perfect desert conditions.'
+  },
+  {
+    id: 'torres', name: 'Torres del Paine NP', cat: 'adventure',
+    sub: 'Magallanes · Heart of Chilean Patagonia',
+    lat: -50.9423, lng: -72.9961,
+    summary: "Chile's crown jewel of wilderness — a national park where soaring granite towers erupt from the Patagonian steppe and glaciers calve into electric-turquoise lakes. One of the last genuinely wild places on Earth, at its most spectacular in December.",
+    highlights: [
+      'The W Trek (4–5 days) — widely considered one of the world\'s greatest hikes',
+      'Base of the Towers: predawn hike to witness golden sunrise on the granite spires',
+      'Grey Glacier: boat through floating icebergs to the luminous ice wall',
+      'Valle del Francés: Andean condors riding thermals above sheer cliffs',
+      'Lago Pehoé: powder-turquoise water of an impossible, electric intensity',
+      'Wildlife: pumas, guanacos, Andean foxes, rheas & condors in the wild',
+      '18 hours of daylight in December — surreal Patagonian summer light'
+    ],
+    tip: 'BOOK ALL accommodation 4–6 months ahead — it sells out completely. Fly to Punta Arenas (3.5h from Santiago) then bus or transfer.',
+    weather: 'Dec: peak season & 18h daylight. Expect powerful Patagonian winds and fast-changing weather.'
+  },
+  {
+    id: 'cochamo', name: 'Valle Cochamó', cat: 'adventure',
+    sub: 'Los Lagos · "Chile\'s Yosemite Valley"',
+    lat: -41.4900, lng: -72.3000,
+    summary: "A hidden valley of cathedral-scale granite walls draped in primordial Valdivian forest, accessible only on foot. Chile's best-kept climbing secret — just two hours from Puerto Montt, yet completely untouched by mass tourism.",
+    highlights: [
+      'Soaring granite walls rivalling Yosemite — world-class rock climbing',
+      'Multi-day trekking on foot-only trails through pristine old-growth forest',
+      'Valdivian temperate rainforest — one of the world\'s rarest forest ecosystems',
+      'Wild river crossings & wilderness camping under genuinely dark skies',
+      'Almost no other tourists — raw, pristine and completely unspoiled',
+      'Only 2h drive from Puerto Montt, then a 4h trek in on foot'
+    ],
+    tip: 'Accessible only on foot from Cochamó village, Nov–Apr window only. Hire a local guide for safety and the full experience.',
+    weather: 'Nov–Dec: only accessible season. Pack serious rain gear — this is a genuine rainforest.'
+  },
+  {
+    id: 'castillo', name: 'Cerro Castillo NP', cat: 'adventure',
+    sub: 'Aysén · "The new Torres del Paine"',
+    lat: -46.1071, lng: -72.1447,
+    summary: "A Torres del Paine alternative most visitors haven't discovered yet — jagged volcanic spires, cyan glacial lagoons and ancient cave art on a four-day circuit, with a fraction of the crowds and none of the booking stress.",
+    highlights: [
+      'Cerro Castillo Circuit: dramatic 4-day trek with far fewer people than TdP',
+      'Jagged, castle-like volcanic peaks towering over cyan glacial lagoons',
+      'Lenga beech forests blazing crimson at the edges of the summer season',
+      'Ancient rock paintings — handprints & guanacos — and condors overhead',
+      'On the iconic Carretera Austral — combine with a road trip south from Puerto Montt'
+    ],
+    tip: 'Great standalone trek or complement to Torres del Paine. Much less crowded and equally dramatic scenery.',
+    weather: 'Dec: excellent summer conditions, fully accessible.'
+  },
+  {
+    id: 'tranquilo', name: 'Marble Caves (Puerto Río Tranquilo)', cat: 'adventure',
+    sub: 'Aysén · General Carrera Lake',
+    lat: -46.6193, lng: -72.6622,
+    summary: "Hollow marble chambers carved by 6,000 years of wave action from General Carrera Lake's turquoise waters. The cave walls glow with a shifting, otherworldly blue light — a geological wonder found nowhere else on Earth.",
+    highlights: [
+      'Marble Cathedral: boat through iridescent turquoise cave networks',
+      'Sunrise light transforms the cave walls into an impossible electric blue',
+      'Kayak directly into the marble formations for the most intimate view',
+      'General Carrera Lake — South America\'s 2nd largest lake, powder-turquoise water',
+      'Combine with Glaciar Exploradores day tour from the same town'
+    ],
+    tip: 'On the Carretera Austral. Book a dawn boat tour — morning light is essential for the full effect. Afternoon light disappoints.',
+    weather: 'Dec: lake is calmer in mornings. Best water clarity and lightest winds of the year.'
+  },
+
+  // ── WINE & FOOD ───────────────────────────────────
+  {
+    id: 'valpo', name: 'Valparaíso', cat: 'wine',
+    sub: 'Valparaíso Region · UNESCO World Heritage port city',
+    lat: -33.0472, lng: -71.6127,
+    summary: "Chile's most creative city clings to 42 steep hills above the Pacific in a blaze of street art, colonial architecture and bohemian energy. The best food scene outside Santiago — and world-class Casablanca Valley wines just 40 minutes away.",
+    highlights: [
+      'Cerro Alegre & Concepción — rainbow staircases & world-famous street murals',
+      'La Sebastiana: Neruda\'s eccentric sea-view house museum',
+      'Caleta Portales fish market from 7am — the city\'s best ceviche',
+      'Casablanca Valley wine day trip just 40km inland',
+      '42 hills connected by 15 surviving historic funicular ascensores',
+      'Chorrillana, conger eel stew, ceviche & empanadas de mariscos',
+      'Craft beer & cocktail scene: Cervecería Anfiteatro, Cumming Street bars'
+    ],
+    tip: 'Stay overnight — the illuminated hillside views at dusk are unforgettable. 1.5h from Santiago by Turbus or Pullman.',
+    weather: 'Nov–Dec: sunny coastal spring/summer, 22–28°C.'
+  },
+  {
+    id: 'colchagua', name: 'Colchagua Valley (Santa Cruz)', cat: 'wine',
+    sub: 'O\'Higgins Region · World-class wine country',
+    lat: -34.6437, lng: -71.3631,
+    summary: "One of the Southern Hemisphere's most acclaimed wine regions, producing Carménère and Cabernet Sauvignon that rival the world's finest. A graceful landscape of rolling vineyards, historic haciendas and Andean views — minutes from San Vicente.",
+    highlights: [
+      'Viña Montes — iconic mountainside terrace with sweeping Andes panorama',
+      'Viña Casa Silva: polo, horses & multi-course wine pairing gourmet lunch',
+      'Colchagua Museum — one of South America\'s finest private museums',
+      'The Wine Train: vintage carriages through rolling vine landscapes',
+      'Seña, Lapostolle & Clos Apalta — boutique world-class estates',
+      'Chile\'s finest Carménère, Cabernet Sauvignon & Syrah',
+      'Hot air ballooning over the valley at dawn (seasonal — book ahead)'
+    ],
+    tip: 'Minutes from San Vicente de Tagua Tagua — a natural day trip from your family base. Rivals Napa & Bordeaux in quality.',
+    weather: 'Nov: vineyard spring green at its most photogenic and lush.'
+  },
+
+  // ── HIDDEN GEMS ───────────────────────────────────
+  {
+    id: 'frutillar', name: 'Frutillar', cat: 'hidden',
+    sub: 'Los Lagos · Bavarian lakeside village on Lago Llanquihue',
+    lat: -41.1251, lng: -73.0566,
+    summary: "A slice of 19th-century Bavaria transplanted to the shores of Lago Llanquihue, with the perfectly conical Osorno Volcano reflected in the water. One of Chile's most charming and genuinely unexpected cultural contradictions — deeply Chilean yet unmistakably German.",
+    highlights: [
+      'Bavarian-style German colonial architecture along the Chilean lake shore',
+      'Lago Llanquihue views across to snowcapped, perfectly conical Osorno Volcano',
+      'Teatro del Lago — internationally acclaimed concert hall & year-round arts programme',
+      'Küchen & Kaffee: authentic German pastry cafés with freshly baked Strudel daily',
+      'Frutillar Bajo beach promenade & freshwater swimming in summer',
+      'Summer music festival in January (book accommodation well ahead)',
+      'A uniquely German-Chilean cultural fusion found nowhere else on Earth'
+    ],
+    tip: 'Only 40min from Puerto Montt. A perfect half-day stop en route to or from Chiloé.',
+    weather: 'Nov–Dec: lovely spring lake weather, 18–24°C.'
+  },
+  {
+    id: 'termas', name: 'Termas Geométricas', cat: 'hidden',
+    sub: 'Araucanía · Near Pucón — world-famous hot springs',
+    lat: -39.5430, lng: -71.8100,
+    summary: "Seventeen geometric thermal pools descend a misty Araucanian rainforest ravine in a work of landscape architecture as beautiful as anything in Chile. The finest hot springs experience in the country — and easily the best recovery day after climbing Villarrica.",
+    highlights: [
+      '17 geometric thermal pools descending a misty forest ravine in perfect symmetry',
+      'Designed by celebrated Chilean architect Germán del Sol',
+      'Red wooden walkways weaving through an ancient temperate forest canopy',
+      'Steam rising dramatically from pools surrounded by giant tree ferns',
+      'Also nearby: Termas de Huife, Los Pozones & Quimey-Co for variety',
+      'Perfect recovery day after the Villarrica Volcano summit climb'
+    ],
+    tip: 'Book well in advance — one of Chile\'s most celebrated experiences. Frequently sells out weeks ahead in December.',
+    weather: 'Magical in any weather. Steam rising through misty rain is particularly atmospheric.'
+  },
+  {
+    id: 'tortel', name: 'Caleta Tortel', cat: 'hidden',
+    sub: 'Aysén · The village with no streets',
+    lat: -47.7951, lng: -73.5273,
+    summary: "An entire village built on cypress boardwalks over tidal channels, with not a single street or road to its name. One of the most surreal and quietly memorable places in all of Patagonia — remote enough that visiting it feels like a genuine achievement.",
+    highlights: [
+      'Entire town navigated exclusively by cypress wood boardwalks — no roads at all',
+      'Weathered wood architecture built directly over fjord marshland & tidal channels',
+      'Kayaking through pristine Patagonian fjords & uninhabited inlets',
+      'Iceberg watching from small local fishing boats on the Río Baker delta',
+      'Calafate berry picking along the boardwalk edges in summer',
+      'One of Chile\'s most remote, unique & genuinely memorable places'
+    ],
+    tip: 'Best visited as part of a Carretera Austral road trip. Very remote — plan at least 2 nights to fully absorb the atmosphere.',
+    weather: 'Nov–Dec: the most reliably accessible and pleasant months to visit.'
+  },
+
+  // ── CLAUDE SUGGESTS ───────────────────────────────
+  {
+    id: 'rapanui', name: 'Easter Island (Rapa Nui)', cat: 'claude',
+    sub: 'Pacific Ocean · 3,700km west of mainland Chile',
+    lat: -27.1127, lng: -109.3497,
+    summary: "A speck of volcanic rock 3,700km from the nearest continent, home to 887 enigmatic stone giants erected by a civilization that remains deeply mysterious. The most remote inhabited island on Earth — and technically a Chilean territory. One of those trips that changes your sense of what humanity is capable of.",
+    highlights: [
+      'Rano Raraku quarry — 400+ unfinished moai frozen mid-creation, half-buried in the hillside',
+      'Ahu Tongariki — the island\'s most dramatic sight: 15 moai standing in a row at sunrise',
+      'Anakena Beach — white sand, palm trees & 8 standing moai in one frame',
+      'Rano Kau volcanic crater lake — breathtaking caldera views & birdman ceremony site',
+      'Orongo ceremonial village — the Tangata Manu (birdman) cult\'s stone ruins on the cliff edge',
+      'Horseback riding or cycling the coastal circuit for moai views without crowds',
+      'Guided cultural tours covering the oral history & mysteries of Rapa Nui civilization'
+    ],
+    tip: 'LATAM flies direct from Santiago (~5.5h). Max stay is 30 days. Book accommodation & park pass ($80 USD) well ahead. 3–4 nights is ideal.',
+    weather: 'Nov–Dec: subtropical, 22–27°C, low rainfall. One of the best months to visit — warm, dry and before the holiday rush.'
+  },
+  {
+    id: 'elqui', name: 'Elqui Valley', cat: 'claude',
+    sub: 'Coquimbo Region · World\'s first Dark Sky Sanctuary',
+    lat: -30.0300, lng: -70.8000,
+    summary: "A narrow river valley of vineyards and pisco distilleries rising into the Andes from La Serena, designated the world's first International Dark Sky Sanctuary with over 300 clear nights per year. By day it produces Chile's finest pisco; after dark it offers the most spectacular stargazing on the planet.",
+    highlights: [
+      'Stargazing: 300+ clear nights/year — the world\'s first certified Dark Sky Sanctuary',
+      'Mamalluca & Pangue observatories: guided night tours through serious telescopes',
+      'Pisco distillery tours & tastings — the valley is Chile\'s spiritual home of pisco',
+      'Pisco Elqui village: a tiny, magical town deep in the canyon at the end of the valley',
+      'Gabriela Mistral route — birthplace of Chile\'s Nobel Prize-winning poet',
+      'La Serena colonial architecture & beaches as your coastal base',
+      'Known mystically as the "new Tibet" — a centre for spiritual & wellness tourism'
+    ],
+    tip: 'Stay in Pisco Elqui for the full experience — the village itself is magical. Easy 4h bus from Santiago or fly to La Serena.',
+    weather: 'Nov–Dec: warm days 26–30°C, cool nights perfect for stargazing. Minimal cloud cover.'
+  },
+  {
+    id: 'conguillio', name: 'Conguillío National Park', cat: 'claude',
+    sub: 'Araucanía · Ancient volcano & primordial Araucaria forest',
+    lat: -38.6583, lng: -71.6286,
+    summary: "A volcanic wilderness of ancient Araucaria forests — the oldest known individual tree is 1,800 years old — surrounding the rumbling, snow-capped Llaima Volcano, one of Chile's most active. One of the most primordial and atmospheric landscapes in the country.",
+    highlights: [
+      'Llaima Volcano (3,125m) — one of Chile\'s most active, last erupted New Year\'s Day 2008',
+      'Araucaria forest: trees up to 1,800 years old, the \'living fossils\' of Chilean flora',
+      'Laguna Conguillio — a stunning crater lake with volcano reflections',
+      'Cañón del Truful-Truful — dramatic volcanic rock gorge with rivers & waterfalls',
+      'Sierra Nevada trail — multi-day hiking through the most pristine sections of the park',
+      'Los Carpinteros trail — ancient Araucaria circuit with woodpecker sightings',
+      'Araucarias ski resort in winter; in summer, pure volcanic wilderness hiking'
+    ],
+    tip: 'Fly or bus to Temuco, then 1.5h drive. Vastly less visited than Torres del Paine and just as spectacular in its own way.',
+    weather: 'Nov–Dec: ideal summer hiking. Roads open, Laguna accessible. 18–24°C in the day.'
+  },
+  {
+    id: 'tierradelfuego', name: 'Tierra del Fuego & King Penguin Park', cat: 'claude',
+    sub: 'Magallanes · The uttermost south',
+    lat: -53.5000, lng: -69.5000,
+    summary: "The uttermost south — a wind-scoured, rain-lashed archipelago where the Andes finally dissolve into the Drake Passage. Home to the only permanent king penguin colony on Earth outside Antarctica, viewable from October to May at Bahía Inútil.",
+    highlights: [
+      'Parque Pingüino Rey — the only king penguin colony outside Antarctica, ~70 birds year-round',
+      'King penguins are the world\'s 2nd largest penguin species — standing nearly 1m tall',
+      'Bahía Inútil: a wild, wind-swept bay where gauchos and penguins coexist',
+      'San Sebastián border crossing & the raw, treeless Fuegian steppe landscape',
+      'Punta Arenas as base — a historic Patagonian port city worth a day of exploration',
+      'Gateway to Cape Horn cruises & the Beagle Channel'
+    ],
+    tip: 'Day tour from Punta Arenas. King Penguin Park is open Oct–May, Tue–Sun. Combine with Torres del Paine as a 10-day southern trip.',
+    weather: 'Nov–Dec: long summer days (18h daylight), 8–14°C. Wind is constant and strong — layer up.'
+  },
+  {
+    id: 'queulat', name: 'Queulat NP & Hanging Glacier', cat: 'claude',
+    sub: 'Aysén · Carretera Austral — Ventisquero Colgante',
+    lat: -44.3500, lng: -72.5000,
+    summary: "A cloud-draped national park on the Carretera Austral where a vast glacier hangs impossibly off a cliff face, slowly calving ice into the milky lagoon far below. One of the most dramatic single sights in all of Chilean Patagonia — and a compelling reason to drive the Carretera.",
+    highlights: [
+      'Ventisquero Colgante (Hanging Glacier) — a glacier perched mid-cliff, visibly retreating',
+      'Laguna Tempanos viewpoint — a 45-min walk to the lagoon directly below the glacier',
+      'Two-ferry boat tour across the lagoon for the closest possible glacier views',
+      'Carretera Austral passes through 70km of the park — views from the road are spectacular',
+      '33 dramatic hairpin curves climbing the Queulat pass — a memorable drive',
+      'Puyuhuapi village: a small German-founded fishing village just outside the park',
+      'Puyuhuapi Lodge hot springs: thermal pools overlooking a remote fjord'
+    ],
+    tip: 'En route on any Carretera Austral road trip. The two-ferry lake tour is worth every peso. Rain is frequent — that\'s part of the atmosphere.',
+    weather: 'Dec: best summer conditions. Rainfall is possible any day — embrace it.'
+  },
+  {
+    id: 'ohiggins', name: 'Villa O\'Higgins', cat: 'claude',
+    sub: 'Aysén · End of the Carretera Austral',
+    lat: -48.4677, lng: -72.5549,
+    summary: "The literal end of the road — where the 1,247km Carretera Austral runs out and the world seems to stop. Boat tours reach the O'Higgins Glacier through ice-choked turquoise waters, where tradition dictates a whiskey chilled with 10,000-year-old glacial ice.",
+    highlights: [
+      '"Fin de la Carretera Austral" plaque — the most southerly point of Chile\'s famous road',
+      'O\'Higgins Glacier boat tour: cruise alongside one of Patagonia\'s most remote glaciers',
+      'Whiskey with 10,000-year-old glacial ice — a genuine local tradition on the boat tour',
+      'Lake O\'Higgins: glacier-blue lake split between Chile and Argentina',
+      'Crossing to El Chaltén, Argentina by foot & boat — a legendary border adventure',
+      'The journey itself: 3 days of driving the Carretera Austral to get here is the point'
+    ],
+    tip: 'The destination rewards the effort — getting here by road is 3 days from Puerto Montt. Fly from Coyhaique if time is short.',
+    weather: 'Dec: peak summer, accessible. Plan for wind and sudden weather changes.'
+  },
+  {
+    id: 'navarino', name: 'Navarino Island & Cape Horn', cat: 'claude',
+    sub: 'Magallanes · Southernmost inhabited island on Earth',
+    lat: -54.9300, lng: -67.6100,
+    summary: "The southernmost inhabited island on Earth, where Puerto Williams is the most austral city in the world. The Dientes de Navarino circuit is the planet's southernmost multi-day trek — and Cape Horn, the mythical fin of the Americas, is a short boat ride away.",
+    highlights: [
+      'Dientes de Navarino circuit — world\'s southernmost multi-day trek (4–5 days, 55km)',
+      'Panoramic summit views over the Beagle Channel to Ushuaia, Argentina',
+      'Puerto Williams — the world\'s most southerly city, population ~2,500',
+      'Cape Horn: boat trips to the legendary 425m rocky promontory at the continent\'s tip',
+      'The Beagle Channel: the same waters navigated by Darwin in 1833–34',
+      'Kawésqar indigenous cultural heritage — one of Patagonia\'s most ancient peoples',
+      'Raw, untamed subantarctic wilderness almost completely free of other tourists'
+    ],
+    tip: 'Fly Punta Arenas → Puerto Williams (1h) or take the 3–4h ferry. The Dientes circuit is serious — go with a guide and full gear.',
+    weather: 'Dec–Jan: the only reliable window. Long days, 6–12°C. Snow possible any time. Winds are extreme.'
+  }
+
+]; // ← end DESTINATIONS
+
+
+/* ════════════════════════════════════════════════════
+   FAVOURITES — LOCAL STORAGE
+   ════════════════════════════════════════════════════ */
+const FAV_KEY = 'chile-trip-2026-favs';
+
+function loadFavs() {
+  try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }
+  catch(e) { return []; }
+}
+function saveFavs(arr) {
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(arr)); }
+  catch(e) {}
+}
+function isFav(id) { return loadFavs().includes(id); }
+
+function addFav(id) {
+  const favs = loadFavs();
+  if (!favs.includes(id)) { favs.push(id); saveFavs(favs); }
+  syncFavUI();
+}
+function removeFav(id) {
+  saveFavs(loadFavs().filter(f => f !== id));
+  syncFavUI();
+}
+function clearFavs() {
+  saveFavs([]);
+  syncFavUI();
+}
+
+let currentDetailId = null;
+
+function toggleFavItem() {
+  if (!currentDetailId) return;
+  if (isFav(currentDetailId)) removeFav(currentDetailId);
+  else addFav(currentDetailId);
+  updateFavBtn(currentDetailId);
+}
+
+function updateFavBtn(id) {
+  const btn = document.getElementById('favBtn');
+  if (!btn) return;
+  if (isFav(id)) {
+    btn.textContent = '♥ Saved';
+    btn.classList.add('saved');
+  } else {
+    btn.textContent = '♡ Save';
+    btn.classList.remove('saved');
+  }
+}
+
+function syncFavUI() {
+  const favs = loadFavs();
+  const count = favs.length;
+  const toggle = document.getElementById('favToggle');
+  const countEl = document.getElementById('favCount');
+  const lbl = document.getElementById('favActionLbl');
+
+  toggle.classList.toggle('has-favs', count > 0);
+  countEl.textContent = count;
+  if (lbl) lbl.textContent = count === 0 ? '0 saved' : `${count} saved`;
+
+  renderFavList(favs);
+  if (currentDetailId) updateFavBtn(currentDetailId);
+}
+
+function renderFavList(favs) {
+  const el = document.getElementById('favList');
+  if (!favs.length) {
+    el.innerHTML = `<div class="fav-empty">
+      <span class="fav-empty-icon">♡</span>
+      Click <strong>Save</strong> on any destination<br>to build your shortlist here.
+    </div>`;
+    return;
+  }
+  el.innerHTML = favs.map(id => {
+    const d = DESTINATIONS.find(x => x.id === id);
+    if (!d) return '';
+    const c = CATS[d.cat];
+    return `<div class="fav-item" onclick="showDetail('${d.id}')">
+      <div class="fav-dot" style="background:${c.color}"></div>
+      <div class="fav-info">
+        <div class="fav-name">${d.name}</div>
+        <div class="fav-cat">${c.label}</div>
+        <div class="fav-sum">${d.summary}</div>
+      </div>
+      <button class="fav-remove" title="Remove" onclick="event.stopPropagation();removeFav('${d.id}')">×</button>
+    </div>`;
+  }).join('');
+}
+
+function openFavPanel() {
+  document.getElementById('favPanel').classList.add('open');
+  syncFavUI();
+}
+function closeFavPanel() {
+  document.getElementById('favPanel').classList.remove('open');
+}
+
+
+/* ════════════════════════════════════════════════════
+   MAP
+   ════════════════════════════════════════════════════ */
+const map = L.map('map', {
+  center: [-38, -68],
+  zoom: 5,
+  zoomControl: true,
+  scrollWheelZoom: true
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 19
+}).addTo(map);
+
+function makeIcon(dest) {
+  const c = CATS[dest.cat];
+  const size = dest.cat === 'family' ? 18 : dest.cat === 'claude' ? 16 : 14;
+  const border = dest.cat === 'family' ? 3 : 2.5;
+  const html = `<div style="
+    width:${size}px;height:${size}px;border-radius:50%;
+    background:${c.color};border:${border}px solid white;
+    box-shadow:0 1px 6px rgba(0,0,0,0.35);
+    cursor:pointer;transition:transform 0.12s;
+  " onmouseenter="this.style.transform='scale(1.4)'"
+     onmouseleave="this.style.transform='scale(1)'"></div>`;
+  return L.divIcon({ className: '', html, iconSize: [size, size], iconAnchor: [size/2, size/2] });
+}
+
+const markerStore = {};
+DESTINATIONS.forEach(dest => {
+  const c = CATS[dest.cat];
+  const marker = L.marker([dest.lat, dest.lng], { icon: makeIcon(dest) })
+    .addTo(map)
+    .on('click', () => showDetail(dest.id));
+  marker.bindPopup(`
+    <div class="pop-inner">
+      <div class="pop-name" style="color:${c.color}">${dest.name}</div>
+      <div class="pop-sub">${dest.sub}</div>
+      <button class="pop-btn" style="background:${c.color}" onclick="showDetail('${dest.id}')">View details →</button>
+    </div>`, { closeButton: false, offset: [0, -4], maxWidth: 240 });
+  markerStore[dest.id] = marker;
+});
+
+
+/* ════════════════════════════════════════════════════
+   SIDEBAR — LIST VIEW
+   ════════════════════════════════════════════════════ */
+let currentFilter = 'all';
+
+function renderList(filter) {
+  const visible = filter === 'all' ? DESTINATIONS : DESTINATIONS.filter(d => d.cat === filter);
+  document.getElementById('statCount').textContent = visible.length;
+  document.getElementById('destList').innerHTML = visible.map(d => {
+    const c = CATS[d.cat];
+    return `<div class="dest-item" id="item-${d.id}" onclick="showDetail('${d.id}')">
+      <div class="dest-dot" style="background:${c.color}"></div>
+      <div style="flex:1;min-width:0;">
+        <div class="dest-name">${d.name}</div>
+        <div class="dest-sum">${d.summary}</div>
+      </div>
+      <span class="dest-tag" style="background:${c.bg};color:${c.fg}">${c.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function showList() {
+  currentDetailId = null;
+  document.getElementById('destList').style.display = '';
+  document.getElementById('detailPanel').classList.remove('visible');
+  map.closePopup();
+}
+
+
+/* ════════════════════════════════════════════════════
+   SIDEBAR — DETAIL VIEW
+   ════════════════════════════════════════════════════ */
+function showDetail(id) {
+  const d = DESTINATIONS.find(x => x.id === id);
+  if (!d) return;
+  currentDetailId = id;
+  const c = CATS[d.cat];
+
+  document.getElementById('destList').style.display = 'none';
+  document.getElementById('detailPanel').classList.add('visible');
+  updateFavBtn(id);
+
+  const nearby = DESTINATIONS
+    .filter(x => x.id !== id && (currentFilter === 'all' || x.cat === currentFilter))
+    .sort((a, b) => {
+      const dist = (dest) => Math.sqrt(Math.pow(dest.lat - d.lat, 2) + Math.pow(dest.lng - d.lng, 2));
+      return dist(a) - dist(b);
+    })
+    .slice(0, 3);
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="d-name" style="color:${c.color}">${d.name}</div>
+    <div class="d-sub">${d.sub}</div>
+    <span class="d-badge" style="background:${c.bg};color:${c.fg}">${c.label}</span>
+    <div class="d-summary">${d.summary}</div>
+    <div class="d-section">Highlights</div>
+    <ul class="d-list">
+      ${d.highlights.map(h => `<li>
+        <span class="d-bullet" style="background:${c.color}"></span>
+        <span>${h}</span>
+      </li>`).join('')}
+    </ul>
+    ${d.tip ? `<div class="d-section">Practical tip</div>
+    <div class="d-tip" style="border-left-color:${c.color}">
+      <div class="d-tip-lbl" style="color:${c.color}">Tip</div>${d.tip}
+    </div>` : ''}
+    ${d.weather ? `<div class="d-wx">&#9728; Nov–Dec: ${d.weather}</div>` : ''}
+    ${nearby.length ? `<div class="d-section" style="margin-top:6px">Nearby</div>
+    ${nearby.map(r => `<div class="nearby-item" onclick="showDetail('${r.id}')">
+      <span class="nearby-dot" style="background:${CATS[r.cat].color}"></span>
+      <div style="flex:1;min-width:0;">
+        <div class="nearby-name">${r.name}</div>
+        <div class="nearby-sub">${r.sub}</div>
+      </div>
+      <span class="nearby-arr">→</span>
+    </div>`).join('')}` : ''}
+  `;
+
+  // Fly map — Easter Island needs a wider zoom since it's far from mainland
+  const zoom = id === 'rapanui' ? 10 : 9;
+  map.flyTo([d.lat, d.lng], zoom, { duration: 1.1, easeLinearity: 0.25 });
+  setTimeout(() => markerStore[id] && markerStore[id].openPopup(), 1000);
+
+  // Close fav panel on mobile when viewing detail
+  if (window.innerWidth <= 780) closeFavPanel();
+}
+
+
+/* ════════════════════════════════════════════════════
+   FILTER
+   ════════════════════════════════════════════════════ */
+function doFilter(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.filt').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  showList();
+  renderList(cat);
+
+  DESTINATIONS.forEach(d => {
+    const m = markerStore[d.id];
+    const visible = cat === 'all' || d.cat === cat;
+    m.setOpacity(visible ? 1 : 0.1);
+    const el = m.getElement();
+    if (el) el.style.pointerEvents = visible ? 'auto' : 'none';
+  });
+
+  if (cat !== 'all') {
+    const pts = DESTINATIONS.filter(d => d.cat === cat && d.id !== 'rapanui').map(d => [d.lat, d.lng]);
+    if (pts.length) map.flyToBounds(L.latLngBounds(pts), { padding: [60, 60], duration: 1.1 });
+  } else {
+    map.flyTo([-38, -68], 5, { duration: 1.1 });
+  }
+}
+
+
+/* ════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════ */
+renderList('all');
+syncFavUI();
+
+</script>
+</body>
+</html>
