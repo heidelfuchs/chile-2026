@@ -248,20 +248,39 @@ function makeIcon(dest) {
   return L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2] });
 }
 
-var markerStore = {};
-DESTINATIONS.forEach(function(dest) {
-  var c = CATS[dest.cat];
-  var marker = L.marker([dest.lat, dest.lng], { icon: makeIcon(dest) })
-    .addTo(map)
-    .on('click', (function(id) { return function() { showDetail(id); }; })(dest.id));
-  marker.bindPopup(
-    '<div class="pop-inner">'
+function makePopupHtml(dest) {
+  var c      = CATS[dest.cat];
+  var faved  = isFav(dest.id);
+  var btnBg  = faved ? '#cc0033' : c.color;
+  var btnLbl = faved ? '♥ Saved to favourites' : '♡ Add to favourites';
+  return '<div class="pop-inner">'
     + '<div class="pop-name" style="color:' + c.color + '">' + dest.name + '</div>'
     + '<div class="pop-sub">' + dest.sub + '</div>'
-    + '<button class="pop-btn" style="background:' + c.color + '" onclick="showDetail(\'' + dest.id + '\')">View details →</button>'
-    + '</div>',
-    { closeButton: false, offset: [0, -4], maxWidth: 240 }
-  );
+    + '<button class="pop-btn" style="background:' + btnBg + '"'
+    + ' onclick="toggleFavFromPopup(\'' + dest.id + '\')">' + btnLbl + '</button>'
+    + '</div>';
+}
+
+function toggleFavFromPopup(id) {
+  if (isFav(id)) removeFav(id);
+  else           addFav(id);
+  /* Refresh popup content to reflect new state */
+  var dest = DESTINATIONS.find(function(x) { return x.id === id; });
+  if (dest && markerStore[id]) markerStore[id].setPopupContent(makePopupHtml(dest));
+  /* Keep sidebar fav button in sync if this destination is open */
+  if (currentDetailId === id) updateFavBtn(id);
+}
+
+var markerStore = {};
+DESTINATIONS.forEach(function(dest) {
+  var marker = L.marker([dest.lat, dest.lng], { icon: makeIcon(dest) })
+    .addTo(map)
+    .on('click', (function(id) { return function() { showDetail(id); }; })(dest.id))
+    .on('popupopen', (function(d) {
+      /* Always re-render on open so fav state is current */
+      return function() { markerStore[d.id].setPopupContent(makePopupHtml(d)); };
+    })(dest));
+  marker.bindPopup(makePopupHtml(dest), { closeButton: false, offset: [0, -4], maxWidth: 240 });
   markerStore[dest.id] = marker;
 });
 
@@ -279,10 +298,14 @@ function renderList(filter) {
   document.getElementById('destList').innerHTML = visible.map(function(d) {
     var c         = CATS[d.cat];
     var notePip   = hasNote(d.id) ? '<span class="note-pip" title="Has notes"></span>' : '';
+    var dateHtml = d.date
+      ? '<div class="dest-date" style="color:' + c.color + '">📅 ' + d.date + '</div>'
+      : '';
     return '<div class="dest-item" id="item-' + d.id + '" onclick="showDetail(\'' + d.id + '\')">'
       + '<div class="dest-dot" style="background:' + c.color + '"></div>'
       + '<div style="flex:1;min-width:0;">'
       +   '<div class="dest-name">' + d.name + ' ' + notePip + '</div>'
+      +   dateHtml
       +   '<div class="dest-sum">' + d.summary + '</div>'
       + '</div>'
       + '<span class="dest-tag" style="background:' + c.bg + ';color:' + c.fg + '">' + c.label + '</span>'
@@ -364,9 +387,14 @@ function showDetail(id) {
     + '<div id="noteStatus" class="d-notes-status" style="opacity:0"></div>'
     + '</div>';
 
+  var detailDateHtml = d.date
+    ? '<div class="d-date" style="color:' + c.color + '">📅 ' + d.date + '</div>'
+    : '';
+
   document.getElementById('detailContent').innerHTML =
     '<div class="d-name" style="color:' + c.color + '">' + d.name + '</div>'
     + '<div class="d-sub">' + d.sub + '</div>'
+    + detailDateHtml
     + '<span class="d-badge" style="background:' + c.bg + ';color:' + c.fg + '">' + c.label + '</span>'
     + '<div class="d-summary">' + d.summary + '</div>'
     + '<div class="d-section">Highlights</div>'

@@ -8,5 +8,6 @@ var CATS = {
   adventure: { color: '#534AB7', label: 'Adventure & nature', bg: '#EEEDFE', fg: '#3C3489' },
   wine:      { color: '#BA7517', label: 'Wine & food',         bg: '#FAEEDA', fg: '#854F0B' },
   hidden:    { color: '#1D9E75', label: 'Hidden gem',          bg: '#E1F5EE', fg: '#0F6E56' },
-  claude:    { color: '#0284C7', label: 'Claude suggests',     bg: '#E0F2FE', fg: '#0369A1' }
+  claude:    { color: '#0284C7', label: 'Claude suggests',     bg: '#E0F2FE', fg: '#0369A1' },
+  events:    { color: '#B5416E', label: 'Event 2026',          bg: '#FDEEF4', fg: '#8A2550' }
 };
