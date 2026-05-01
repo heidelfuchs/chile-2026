@@ -1,26 +1,7 @@
 // ─── WINE & FOOD ─────────────────────────────────────────────────────────────
+// Note: Valparaíso (valpo) has moved to data/cities.js
 
 DESTINATIONS.push(
-
-  {
-    id: 'valpo',
-    name: 'Valparaíso',
-    cat: 'wine',
-    sub: 'Valparaíso Region · UNESCO World Heritage port city',
-    lat: -33.0472, lng: -71.6127,
-    summary: "Chile's most creative city clings to 42 steep hills above the Pacific in a blaze of street art, colonial architecture and bohemian energy. The best food scene outside Santiago — and world-class Casablanca Valley wines just 40 minutes away.",
-    highlights: [
-      'Cerro Alegre & Concepción — rainbow staircases & world-famous street murals',
-      "La Sebastiana: Neruda's eccentric sea-view house museum",
-      'Caleta Portales fish market from 7am — the city\'s best ceviche',
-      'Casablanca Valley wine day trip just 40km inland',
-      '42 hills connected by 15 surviving historic funicular ascensores',
-      'Chorrillana, conger eel stew, ceviche & empanadas de mariscos',
-      'Craft beer & cocktail scene: Cervecería Anfiteatro, Cumming Street bars'
-    ],
-    tip: 'Stay overnight — the illuminated hillside views at dusk are unforgettable. 1.5h from Santiago by Turbus or Pullman bus.',
-    weather: 'Nov–Dec: sunny coastal spring/summer, 22–28°C.'
-  },
 
   {
     id: 'colchagua',

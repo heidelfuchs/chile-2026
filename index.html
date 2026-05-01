@@ -29,6 +29,7 @@
       --claude:    #0284C7;
       --events:    #B5416E;
       --hiking:    #5E7C3D;
+      --cities:    #64748B;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -829,6 +830,9 @@
       <button class="filt" onclick="doFilter('hiking',this)">
         <span class="filt-dot" style="background:var(--hiking)"></span>More Hiking
       </button>
+      <button class="filt" onclick="doFilter('cities',this)">
+        <span class="filt-dot" style="background:var(--cities)"></span>Cities &amp; Towns
+      </button>
     </div>
 
     <div class="s-body">
@@ -850,6 +854,7 @@
       <div class="leg-item"><span class="leg-dot" style="background:var(--claude)"></span>Claude suggests</div>
       <div class="leg-item"><span class="leg-dot" style="background:var(--events)"></span>Events 2026</div>
       <div class="leg-item"><span class="leg-dot" style="background:var(--hiking)"></span>More Hiking</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--cities)"></span>Cities &amp; Towns</div>
     </div>
   </div>
 
@@ -944,6 +949,7 @@
 <script src="data/claude.js"></script>
 <script src="data/events.js"></script>
 <script src="data/hiking.js"></script>
+<script src="data/cities.js"></script>
 
 <!-- 3b. Transport layer data (airports, buses, ferries) -->
 <script src="data/airports.js"></script>
