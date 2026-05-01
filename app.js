@@ -404,11 +404,15 @@ function renderList(filter) {
     var dateHtml = d.date
       ? '<div class="dest-date" style="color:' + c.color + '">📅 ' + d.date + '</div>'
       : '';
+    var diffHtml = d.difficulty
+      ? '<div class="dest-date" style="color:' + c.fg + '">⚡ ' + d.difficulty + (d.duration ? ' · ' + d.duration : '') + '</div>'
+      : '';
     return '<div class="dest-item" id="item-' + d.id + '" onclick="showDetail(\'' + d.id + '\')">'
       + '<div class="dest-dot" style="background:' + c.color + '"></div>'
       + '<div style="flex:1;min-width:0;">'
       +   '<div class="dest-name">' + d.name + ' ' + notePip + '</div>'
       +   dateHtml
+      +   diffHtml
       +   '<div class="dest-sum">' + d.summary + '</div>'
       + '</div>'
       + '<span class="dest-tag" style="background:' + c.bg + ';color:' + c.fg + '">' + c.label + '</span>'
@@ -494,11 +498,20 @@ function showDetail(id) {
     ? '<div class="d-date" style="color:' + c.color + '">📅 ' + d.date + '</div>'
     : '';
 
+  var hikingMetaHtml = (d.difficulty || d.duration)
+    ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px;">'
+      + (d.difficulty ? '<span style="font-size:11px;font-weight:500;padding:3px 9px;border-radius:10px;background:' + c.bg + ';color:' + c.fg + '">⚡ ' + d.difficulty + '</span>' : '')
+      + (d.duration   ? '<span style="font-size:11px;font-weight:500;padding:3px 9px;border-radius:10px;background:' + c.bg + ';color:' + c.fg + '">⏱ ' + d.duration   + '</span>' : '')
+      + (d.multiday   ? '<span style="font-size:11px;font-weight:500;padding:3px 9px;border-radius:10px;background:#EEF3E6;color:#3D5224">🏕 Multi-day option</span>' : '')
+      + '</div>'
+    : '';
+
   document.getElementById('detailContent').innerHTML =
     '<div class="d-name" style="color:' + c.color + '">' + d.name + '</div>'
     + '<div class="d-sub">' + d.sub + '</div>'
     + detailDateHtml
     + '<span class="d-badge" style="background:' + c.bg + ';color:' + c.fg + '">' + c.label + '</span>'
+    + hikingMetaHtml
     + '<div class="d-summary">' + d.summary + '</div>'
     + '<div class="d-section">Highlights</div>'
     + '<ul class="d-list">' + highlightsHtml + '</ul>'
