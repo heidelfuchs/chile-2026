@@ -183,7 +183,7 @@ DESTINATIONS.push(
   {
     id: 'pumalin',
     name: 'Pumalín Douglas Tompkins NP',
-    cat: 'claude',
+    cat: 'adventure',
     sub: 'Los Lagos · Ancient alerce forest & Chaitén Volcano',
     lat: -42.7000, lng: -72.6000,
     summary: "The most ambitious private conservation project in South American history — 402,000 hectares of Valdivian rainforest and fjords donated to Chile by the late US conservationist Douglas Tompkins. Home to 3,000-year-old alerce trees and the still-smoking caldera of Chaitén Volcano, which spectacularly erupted in 2008, reshaped the landscape and rewilded the park overnight.",
