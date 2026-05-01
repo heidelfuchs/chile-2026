@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chile Trip 2026 — Interactive Travel Map</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <style>
+    /* ─── TOKENS ─────────────────────────────────────── */
+    :root {
+      --bg:        #F7F6F2;
+      --surface:   #FFFFFF;
+      --surface2:  #EFEDE8;
+      --border:    rgba(0,0,0,0.08);
+      --border2:   rgba(0,0,0,0.15);
+      --text:      #1C1B18;
+      --text2:     #5E5D59;
+      --text3:     #9C9A94;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --sidebar-w: 390px;
+      --fav-w:     310px;
+
+      --family:    #D85A30;
+      --adventure: #534AB7;
+      --wine:      #BA7517;
+      --hidden:    #1D9E75;
+      --claude:    #0284C7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #18171A;
+        --surface: #232229;
+        --surface2:#2C2B31;
+        --border:  rgba(255,255,255,0.08);
+        --border2: rgba(255,255,255,0.15);
+        --text:    #EDEBE6;
+        --text2:   #A4A19A;
+        --text3:   #6E6C66;
+      }
+    }
+
+    /* ─── RESET ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ─── APP SHELL ──────────────────────────────────── */
+    .app { display: flex; height: 100vh; }
+
+    /* ─── LEFT SIDEBAR ───────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+    }
+    .s-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .s-title  { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 2px; display: flex; align-items: center; gap: 9px; }
+    .s-sub    { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+    .stat-row { display: flex; gap: 7px; }
+    .stat     { flex: 1; background: var(--surface2); border-radius: var(--radius-sm); padding: 7px 8px; text-align: center; }
+    .stat-val { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.1; }
+    .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+    /* Filters */
+    .s-filters {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .filt {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .filt:hover { background: var(--border); }
+    .filt.on   { background: var(--text); color: var(--surface); border-color: var(--text); }
+    .filt-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Sidebar body */
+    .s-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* Destination list */
+    .dest-list { flex: 1; overflow-y: auto; }
+    .dest-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 18px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .dest-item:hover, .dest-item.active { background: var(--surface2); }
+    .dest-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .dest-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+    .dest-sum  { font-size: 11px; color: var(--text3); margin-top: 2px; line-height: 1.4;
+                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .dest-tag  { margin-left: auto; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px;
+                 flex-shrink: 0; white-space: nowrap; align-self: flex-start; margin-top: 1px; }
+
+    /* Detail panel */
+    .detail-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .detail-panel.visible { display: flex; }
+    .detail-back {
+      padding: 9px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      cursor: pointer; color: var(--text3); font-size: 12px;
+      background: none; border: none; padding: 0;
+    }
+    .back-btn:hover { color: var(--text); }
+    .fav-btn {
+      display: flex; align-items: center; gap: 5px;
+      cursor: pointer; font-size: 12px; font-weight: 500;
+      background: none; border: 1px solid var(--border2);
+      border-radius: 20px; padding: 4px 11px; color: var(--text2);
+      transition: all 0.15s;
+    }
+    .fav-btn:hover { background: var(--surface2); }
+    .fav-btn.saved { border-color: #E03; color: #E03; background: #fff0f0; }
+    @media (prefers-color-scheme: dark) { .fav-btn.saved { background: #2a1010; } }
+
+    .detail-scroll { flex: 1; overflow-y: auto; padding: 16px 18px 28px; }
+    .d-name  { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; line-height: 1.2; margin-bottom: 3px; }
+    .d-sub   { font-size: 12px; color: var(--text3); margin-bottom: 9px; }
+    .d-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 10px; margin-bottom: 13px; }
+    .d-summary { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 16px;
+                 padding: 11px 13px; background: var(--surface2); border-radius: var(--radius-md); }
+    .d-section { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+                 color: var(--text3); margin-bottom: 7px; }
+    .d-list { list-style: none; margin-bottom: 14px; }
+    .d-list li { display: flex; gap: 9px; padding: 5px 0; font-size: 13px; color: var(--text2);
+                 border-bottom: 1px solid var(--border); line-height: 1.45; }
+    .d-list li:last-child { border: none; }
+    .d-bullet { flex-shrink: 0; width: 5px; height: 5px; border-radius: 50%; margin-top: 6px; }
+    .d-tip { border-left: 3px solid; padding: 8px 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+             font-size: 12px; color: var(--text2); background: var(--surface2); margin-bottom: 9px; }
+    .d-tip-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .d-wx { font-size: 11px; color: var(--text3); margin-bottom: 16px; }
+    .nearby-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius-sm);
+                   border: 1px solid var(--border); cursor: pointer; margin-bottom: 6px; transition: background 0.1s; }
+    .nearby-item:hover { background: var(--surface2); }
+    .nearby-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .nearby-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .nearby-sub  { font-size: 11px; color: var(--text3); }
+    .nearby-arr  { color: var(--text3); margin-left: auto; }
+
+    /* Sidebar legend */
+    .s-legend {
+      padding: 9px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .leg-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text3); }
+    .leg-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ─── MAP WRAPPER ────────────────────────────────── */
+    .map-wrap { flex: 1; position: relative; overflow: hidden; }
+    #map { width: 100%; height: 100%; }
+
+    /* Favourites toggle pill */
+    .fav-toggle {
+      position: absolute;
+      bottom: 28px;
+      right: 16px;
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: 24px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      transition: box-shadow 0.15s, transform 0.12s;
+    }
+    .fav-toggle:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.22); transform: translateY(-1px); }
+    .fav-toggle.has-favs { color: #E03; }
+    .fav-count {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #E03; color: #fff; font-size: 10px; font-weight: 700;
+    }
+    .fav-toggle.has-favs .fav-count { display: inline-flex; }
+
+    /* ─── FAVOURITES RIGHT PANEL ─────────────────────── */
+    .fav-panel {
+      width: var(--fav-w);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+      transform: translateX(var(--fav-w));
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .fav-panel.open { transform: translateX(0); }
+
+    .fav-hd {
+      padding: 16px 18px 13px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .fav-hd-title { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; display: flex; align-items: center; gap: 7px; }
+    .fav-hd-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .fav-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-size: 18px; line-height: 1;
+      padding: 2px 4px; border-radius: 4px;
+      transition: color 0.1s;
+    }
+    .fav-close:hover { color: var(--text); }
+
+    .fav-actions {
+      padding: 9px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fav-action-lbl { font-size: 11px; color: var(--text3); }
+    .fav-clear {
+      font-size: 11px; padding: 3px 9px; border-radius: 20px;
+      border: 1px solid var(--border2); background: none;
+      color: var(--text3); cursor: pointer;
+      transition: all 0.12s;
+    }
+    .fav-clear:hover { color: #E03; border-color: #E03; background: #fff0f0; }
+    @media (prefers-color-scheme: dark) { .fav-clear:hover { background: #2a1010; } }
+
+    .fav-list { flex: 1; overflow-y: auto; }
+    .fav-empty {
+      padding: 3rem 20px;
+      text-align: center;
+      color: var(--text3);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .fav-empty-icon { font-size: 28px; display: block; margin-bottom: 10px; opacity: 0.5; }
+
+    .fav-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .fav-item:hover { background: var(--surface2); }
+    .fav-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .fav-info { flex: 1; min-width: 0; }
+    .fav-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+    .fav-cat  { font-size: 10px; color: var(--text3); margin-top: 2px; }
+    .fav-sum  { font-size: 11px; color: var(--text3); margin-top: 3px; line-height: 1.4;
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fav-remove {
+      flex-shrink: 0;
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-size: 16px; line-height: 1;
+      padding: 2px 4px; border-radius: 4px;
+      transition: color 0.1s;
+      align-self: center;
+    }
+    .fav-remove:hover { color: #E03; }
+    .fav-footer {
+      padding: 11px 18px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text3);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* ─── LEAFLET OVERRIDES ──────────────────────────── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 11px !important;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.16) !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      border: none !important;
+    }
+    .leaflet-popup-content { margin: 0 !important; width: 230px !important; }
+    .leaflet-popup-tip-container { display: none !important; }
+    .pop-inner { padding: 13px 15px 12px; font-family: inherit; }
+    .pop-name  { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .pop-sub   { font-size: 11px; color: #888; margin-bottom: 10px; line-height: 1.4; }
+    .pop-btn   { display: block; width: 100%; padding: 7px; border-radius: var(--radius-sm); border: none;
+                 cursor: pointer; font-size: 12px; font-weight: 500; color: white; text-align: center;
+                 transition: opacity 0.15s; }
+    .pop-btn:hover { opacity: 0.86; }
+
+    /* ─── MOBILE ─────────────────────────────────────── */
+    @media (max-width: 780px) {
+      .app { flex-direction: column; }
+      .sidebar { width: 100%; height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
+      .map-wrap { height: 55vh; flex: none; }
+      .fav-panel { position: fixed; top: 0; right: 0; height: 100vh; z-index: 1000; box-shadow: -4px 0 20px rgba(0,0,0,0.15); }
+      :root { --sidebar-w: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══════════ LEFT SIDEBAR ══════════ -->
+  <div class="sidebar">
+    <div class="s-header">
+      <div class="s-title">
+        <svg width="30" height="20" viewBox="0 0 30 20" xmlns="http://www.w3.org/2000/svg" style="border-radius:3px;flex-shrink:0;">
+          <rect width="30" height="20" fill="#D52B1E"/>
+          <rect width="30" height="10" y="10" fill="#FFFFFF"/>
+          <rect width="12" height="10" fill="#003DA5"/>
+          <polygon points="6,2.3 7.2,5.9 11,5.9 8,8 9.1,11.6 6,9.5 2.9,11.6 4,8 1,5.9 4.8,5.9" fill="#FFFFFF"/>
+        </svg>
+        Chile Trip — Nov &amp; Dec 2026
+      </div>
+      <div class="s-sub">8 weeks · Family, adventure, wine, hidden gems &amp; more</div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-val" id="statCount">28</div><div class="stat-lbl">destinations</div></div>
+        <div class="stat"><div class="stat-val">8</div><div class="stat-lbl">weeks</div></div>
+        <div class="stat"><div class="stat-val">4</div><div class="stat-lbl">family stops</div></div>
+        <div class="stat"><div class="stat-val">4,300<span style="font-size:10px;font-weight:400">km</span></div><div class="stat-lbl">north to south</div></div>
+      </div>
+    </div>
+
+    <div class="s-filters">
+      <button class="filt on"  onclick="doFilter('all',this)">All</button>
+      <button class="filt" onclick="doFilter('family',this)">
+        <span class="filt-dot" style="background:var(--family)"></span>Family
+      </button>
+      <button class="filt" onclick="doFilter('adventure',this)">
+        <span class="filt-dot" style="background:var(--adventure)"></span>Adventure
+      </button>
+      <button class="filt" onclick="doFilter('wine',this)">
+        <span class="filt-dot" style="background:var(--wine)"></span>Wine &amp; food
+      </button>
+      <button class="filt" onclick="doFilter('hidden',this)">
+        <span class="filt-dot" style="background:var(--hidden)"></span>Hidden gems
+      </button>
+      <button class="filt" onclick="doFilter('claude',this)">
+        <span class="filt-dot" style="background:var(--claude)"></span>Claude suggests
+      </button>
+    </div>
+
+    <div class="s-body">
+      <div class="dest-list" id="destList"></div>
+      <div class="detail-panel" id="detailPanel">
+        <div class="detail-back">
+          <button class="back-btn" onclick="showList()">← All destinations</button>
+          <button class="fav-btn" id="favBtn" onclick="toggleFavItem()">♡ Save</button>
+        </div>
+        <div class="detail-scroll" id="detailContent"></div>
+      </div>
+    </div>
+
+    <div class="s-legend">
+      <div class="leg-item"><span class="leg-dot" style="background:var(--family)"></span>Family</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--adventure)"></span>Adventure</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--wine)"></span>Wine</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--hidden)"></span>Hidden</div>
+      <div class="leg-item"><span class="leg-dot" style="background:var(--claude)"></span>Claude suggests</div>
+    </div>
+  </div>
+
+  <!-- ══════════ MAP ══════════ -->
+  <div class="map-wrap">
+    <div id="map"></div>
+    <button class="fav-toggle" id="favToggle" onclick="openFavPanel()">
+      ♡ Favourites
+      <span class="fav-count" id="favCount">0</span>
+    </button>
+  </div>
+
+  <!-- ══════════ RIGHT — FAVOURITES PANEL ══════════ -->
+  <div class="fav-panel" id="favPanel">
+    <div class="fav-hd">
+      <div>
+        <div class="fav-hd-title">♡ Favourites</div>
+        <div class="fav-hd-sub">Your saved destinations</div>
+      </div>
+      <button class="fav-close" onclick="closeFavPanel()">✕</button>
+    </div>
+    <div class="fav-actions">
+      <span class="fav-action-lbl" id="favActionLbl">0 saved</span>
+      <button class="fav-clear" onclick="clearFavs()">Clear all</button>
+    </div>
+    <div class="fav-list" id="favList">
+      <div class="fav-empty">
+        <span class="fav-empty-icon">♡</span>
+        Click <strong>Save</strong> on any destination<br>to build your shortlist here.
+      </div>
+    </div>
+    <div class="fav-footer">Saved across sessions via local storage</div>
+  </div>
+
+</div>
+
+<!-- ═══════════ SCRIPTS — order matters ═══════════ -->
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+
+<!-- 1. Bootstrap the global array -->
+<script>var DESTINATIONS = [];</script>
+
+<!-- 2. Category config -->
+<script src="data/categories.js"></script>
+
+<!-- 3. Destination data — add new files here to extend the map -->
+<script src="data/family.js"></script>
+<script src="data/adventure.js"></script>
+<script src="data/wine.js"></script>
+<script src="data/hidden.js"></script>
+<script src="data/claude.js"></script>
+
+<!-- 4. App logic -->
+<script src="app.js"></script>
+
+</body>
+</html>
