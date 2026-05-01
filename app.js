@@ -137,6 +137,7 @@ function renderFavList(favs) {
 }
 
 function openFavPanel() {
+  closeMobileCard();
   document.getElementById('favPanel').classList.add('open');
   syncFavUI();
 }
@@ -221,6 +222,86 @@ function escHtml(str) {
 
 
 /* ────────────────────────────────────────────────────
+   MOBILE MODE
+   ──────────────────────────────────────────────────── */
+function isMobile() { return window.innerWidth <= 780; }
+
+var _mobileCardDestId = null;
+
+/* Toggle between list mode (sidebar visible) and map mode */
+function toggleMobileMode() {
+  if (!isMobile()) return;
+  var app = document.querySelector('.app');
+  var goingToMap = !app.classList.contains('mobile-map');
+  if (goingToMap) {
+    app.classList.add('mobile-map');
+    map.closePopup();
+    closeMobileCard();
+    /* Leaflet needs a nudge after the sidebar slides away */
+    setTimeout(function() { map.invalidateSize(); }, 340);
+  } else {
+    app.classList.remove('mobile-map');
+    closeMobileCard();
+  }
+}
+
+/* Show the slide-up destination card in map mode */
+function showMobileCard(id) {
+  var d = DESTINATIONS.find(function(x) { return x.id === id; });
+  if (!d) return;
+  var c = CATS[d.cat];
+  _mobileCardDestId = id;
+
+  var catEl     = document.getElementById('mobileCardCat');
+  var nameEl    = document.getElementById('mobileCardName');
+  var subEl     = document.getElementById('mobileCardSub');
+  var summaryEl = document.getElementById('mobileCardSummary');
+  var btn       = document.getElementById('mobileCardBtn');
+
+  if (catEl)     { catEl.textContent = c.label; catEl.style.color = c.color; }
+  if (nameEl)    { nameEl.textContent = d.name; nameEl.style.color = c.color; }
+  if (subEl)     { subEl.textContent = d.sub; }
+  if (summaryEl) { summaryEl.textContent = d.summary; }
+  if (btn)       { btn.style.background = c.color; }
+
+  var card = document.getElementById('mobileBottomCard');
+  if (card) card.classList.add('visible');
+
+  map.flyTo([d.lat, d.lng], 9, { duration: 0.8, easeLinearity: 0.3 });
+}
+
+function closeMobileCard() {
+  var card = document.getElementById('mobileBottomCard');
+  if (card) card.classList.remove('visible');
+  _mobileCardDestId = null;
+}
+
+/* "View details & notes →" button on the bottom card */
+function mobileCardViewDetail() {
+  if (!_mobileCardDestId) return;
+  var id = _mobileCardDestId;
+  closeMobileCard();
+  document.querySelector('.app').classList.remove('mobile-map');
+  showDetail(id);
+}
+
+/* ✏ button on the bottom card — opens detail and scrolls straight to notes */
+function mobileCardGoNotes() {
+  if (!_mobileCardDestId) return;
+  var id = _mobileCardDestId;
+  closeMobileCard();
+  document.querySelector('.app').classList.remove('mobile-map');
+  showDetail(id);
+  setTimeout(function() {
+    var ta = document.getElementById('noteTextarea');
+    if (!ta) return;
+    ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ta.focus();
+  }, 260);
+}
+
+
+/* ────────────────────────────────────────────────────
    MAP INITIALISATION
    ──────────────────────────────────────────────────── */
 var map = L.map('map', {
@@ -292,13 +373,28 @@ function toggleFavFromPopup(id) {
 
 var markerStore = {};
 DESTINATIONS.forEach(function(dest) {
-  var marker = L.marker([dest.lat, dest.lng], { icon: makeIcon(dest) })
-    .addTo(map)
-    .on('click', (function(id) { return function() { showDetail(id); }; })(dest.id))
-    .on('popupopen', (function(d) {
-      /* Always re-render on open so fav state is current */
-      return function() { markerStore[d.id].setPopupContent(makePopupHtml(d)); };
-    })(dest));
+  var marker = L.marker([dest.lat, dest.lng], { icon: makeIcon(dest) }).addTo(map);
+
+  marker.on('click', (function(d, m) {
+    return function() {
+      if (isMobile()) {
+        /* On mobile: show slide-up card, suppress popup */
+        setTimeout(function() { m.closePopup(); }, 0);
+        showMobileCard(d.id);
+      } else {
+        showDetail(d.id);
+      }
+    };
+  })(dest, marker));
+
+  marker.on('popupopen', (function(d, m) {
+    return function() {
+      if (isMobile()) { m.closePopup(); return; }
+      /* Desktop: always re-render so fav state is current */
+      m.setPopupContent(makePopupHtml(d));
+    };
+  })(dest, marker));
+
   marker.bindPopup(makePopupHtml(dest), { closeButton: false, offset: [0, -4], maxWidth: 240 });
   markerStore[dest.id] = marker;
 });
@@ -436,6 +532,12 @@ function showDetail(id) {
   if (!d) return;
   currentDetailId = id;
   var c = CATS[d.cat];
+
+  /* Mobile: ensure sidebar is visible (list mode) */
+  if (isMobile()) {
+    document.querySelector('.app').classList.remove('mobile-map');
+    closeMobileCard();
+  }
 
   document.getElementById('destList').style.display = 'none';
   document.getElementById('detailPanel').classList.add('visible');

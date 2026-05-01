@@ -508,14 +508,223 @@
       .note-toggle.active { background: #2D2410; border-color: #D97706; color: #FCD34D; }
     }
 
+    /* ─── MOBILE-ONLY ELEMENTS (hidden on desktop) ──── */
+    .mobile-map-btn,
+    .mobile-list-btn,
+    .mobile-bottom-card { display: none; }
+
     /* ─── MOBILE ─────────────────────────────────────── */
     @media (max-width: 780px) {
-      .app { flex-direction: column; }
-      .sidebar { width: 100%; height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
-      .map-wrap { height: 55vh; flex: none; }
-      .fav-panel { position: fixed; top: 0; right: 0; width: 0; height: 100vh; z-index: 1000; box-shadow: none; }
-      .fav-panel.open { width: var(--fav-w); box-shadow: -4px 0 20px rgba(0,0,0,0.15); }
-      :root { --sidebar-w: 100%; }
+
+      /* ── Core layout: full-screen layers ── */
+      .app { position: relative; overflow: hidden; }
+
+      /* Sidebar takes full screen — it IS the primary experience */
+      .sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        z-index: 200;
+        transform: translateX(0);
+        transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+        border-right: none;
+        border-bottom: none;
+      }
+
+      /* Map mode: slide sidebar off to the left */
+      .app.mobile-map .sidebar {
+        transform: translateX(-100%);
+        pointer-events: none;
+      }
+
+      /* Map always fills the screen underneath */
+      .map-wrap {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        flex: none;
+      }
+
+      /* Fav panel: full-width overlay */
+      .fav-panel {
+        position: fixed;
+        top: 0; left: 0;
+        width: 0; height: 100vh;
+        z-index: 400;
+        border-left: none;
+        box-shadow: none;
+      }
+      .fav-panel.open {
+        width: 100vw;
+        box-shadow: none;
+      }
+
+      /* ── Filter chips: single horizontally-scrolling row ── */
+      .s-filters {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 8px 12px;
+        gap: 6px;
+      }
+      .s-filters::-webkit-scrollbar { display: none; }
+      .filt { white-space: nowrap; font-size: 12px; padding: 7px 14px; flex-shrink: 0; }
+
+      /* ── Legend: too cluttered on mobile ── */
+      .s-legend { display: none; }
+
+      /* ── Larger touch targets & readable text ── */
+      .dest-item  { padding: 13px 16px; gap: 11px; }
+      .dest-name  { font-size: 14px; }
+      .dest-sum   { font-size: 12px; }
+      .back-btn   { font-size: 13px; min-height: 44px; }
+      .fav-btn    { font-size: 13px; padding: 8px 14px; min-height: 44px; }
+      .fav-item   { padding: 13px 16px; }
+      .fav-name   { font-size: 14px; }
+
+      /* ── Detail view: full-screen, comfortable reading ── */
+      .detail-scroll   { padding: 16px 16px 100px; }
+      .d-name          { font-size: 21px; }
+      .d-summary       { font-size: 14px; line-height: 1.65; }
+      .d-list li       { font-size: 13px; }
+      .d-tip           { font-size: 13px; }
+      .d-wx            { font-size: 12px; }
+
+      /* ── Notes: proper space to write ── */
+      .d-notes-textarea { min-height: 140px; font-size: 15px; line-height: 1.6; }
+
+      /* ── s-title: push map button to right edge ── */
+      .s-title { width: 100%; }
+      .s-title .mobile-map-btn { margin-left: auto; }
+
+      /* ── Mobile toggle buttons ── */
+      .mobile-map-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 7px 14px;
+        border-radius: 20px;
+        border: 1.5px solid var(--border2);
+        background: var(--surface2);
+        color: var(--text2);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background 0.12s;
+      }
+      .mobile-map-btn:active { background: var(--border); }
+
+      .mobile-list-btn {
+        display: flex;
+        position: absolute;
+        top: 12px; left: 12px;
+        z-index: 500;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 16px;
+        border-radius: 20px;
+        border: none;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 14px rgba(0,0,0,0.2);
+        font-family: inherit;
+      }
+      .mobile-list-btn:active { opacity: 0.82; }
+
+      /* Reposition floating map controls */
+      .note-toggle { top: 12px; right: 12px; font-size: 11px; padding: 6px 11px; }
+      .fav-toggle  { bottom: 24px; right: 16px; }
+
+      /* ── Mobile destination card (slides up from bottom in map mode) ── */
+      .mobile-bottom-card {
+        display: block;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 450;
+        background: var(--surface);
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 -4px 28px rgba(0,0,0,0.2);
+        transform: translateY(105%);
+        transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+      }
+      .mobile-bottom-card.visible { transform: translateY(0); }
+
+      .mobile-card-handle {
+        width: 38px; height: 4px;
+        border-radius: 2px;
+        background: var(--border2);
+        margin: 10px auto 0;
+      }
+      .mobile-card-content { padding: 12px 18px 20px; }
+      .mobile-card-header  {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 9px;
+      }
+      .mobile-card-meta { flex: 1; min-width: 0; }
+      .mobile-card-cat  { font-size: 11px; font-weight: 500; margin-bottom: 2px; }
+      .mobile-card-name {
+        font-size: 18px; font-weight: 600;
+        letter-spacing: -0.3px; line-height: 1.2;
+      }
+      .mobile-card-sub {
+        font-size: 12px; color: var(--text3);
+        margin-top: 3px; line-height: 1.4;
+      }
+      .mobile-card-close {
+        background: var(--surface2); border: none;
+        color: var(--text2); font-size: 16px;
+        cursor: pointer; padding: 7px 9px;
+        border-radius: var(--radius-sm); line-height: 1;
+        flex-shrink: 0;
+      }
+      .mobile-card-summary {
+        font-size: 13px; color: var(--text2);
+        line-height: 1.55; margin-bottom: 14px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .mobile-card-actions { display: flex; gap: 8px; }
+      .mobile-card-btn {
+        flex: 1;
+        padding: 13px;
+        border-radius: var(--radius-md);
+        border: none;
+        font-size: 14px; font-weight: 600;
+        color: white;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity 0.15s;
+      }
+      .mobile-card-btn:active { opacity: 0.82; }
+      .mobile-card-note-btn {
+        padding: 13px 18px;
+        border-radius: var(--radius-md);
+        border: 1.5px solid var(--border2);
+        background: var(--surface2);
+        color: var(--text2);
+        font-size: 17px;
+        cursor: pointer;
+        font-family: inherit;
+        flex-shrink: 0;
+        transition: background 0.12s;
+      }
+      .mobile-card-note-btn:active { background: var(--border); }
+
+      @media (prefers-color-scheme: dark) {
+        .mobile-card-close:hover { background: var(--surface); }
+      }
     }
   </style>
 </head>
@@ -533,6 +742,7 @@
           <polygon points="6,2.3 7.2,5.9 11,5.9 8,8 9.1,11.6 6,9.5 2.9,11.6 4,8 1,5.9 4.8,5.9" fill="#FFFFFF"/>
         </svg>
         Chile Trip — Nov &amp; Dec 2026
+        <button class="mobile-map-btn" id="mobileMapBtn" onclick="toggleMobileMode()">🗺 Map</button>
       </div>
       <div class="s-sub">8 weeks · Family, adventure, wine, hidden gems &amp; more</div>
       <div class="stat-row">
@@ -593,6 +803,10 @@
   <!-- ══════════ MAP ══════════ -->
   <div class="map-wrap">
     <div id="map"></div>
+
+    <!-- Mobile: back to list button (visible in map mode) -->
+    <button class="mobile-list-btn" id="mobileListBtn" onclick="toggleMobileMode()">← List</button>
+
     <button class="note-toggle active" id="noteToggleBtn"
             onclick="toggleNoteOverlays()"
             title="Hide notes on map">
@@ -602,6 +816,26 @@
       ♡ Favourites
       <span class="fav-count" id="favCount">0</span>
     </button>
+
+    <!-- Mobile: destination card slides up when a marker is tapped -->
+    <div class="mobile-bottom-card" id="mobileBottomCard">
+      <div class="mobile-card-handle"></div>
+      <div class="mobile-card-content">
+        <div class="mobile-card-header">
+          <div class="mobile-card-meta">
+            <div class="mobile-card-cat" id="mobileCardCat"></div>
+            <div class="mobile-card-name" id="mobileCardName"></div>
+            <div class="mobile-card-sub" id="mobileCardSub"></div>
+          </div>
+          <button class="mobile-card-close" onclick="closeMobileCard()" aria-label="Close">✕</button>
+        </div>
+        <div class="mobile-card-summary" id="mobileCardSummary"></div>
+        <div class="mobile-card-actions">
+          <button class="mobile-card-btn" id="mobileCardBtn" onclick="mobileCardViewDetail()">View details &amp; notes →</button>
+          <button class="mobile-card-note-btn" onclick="mobileCardGoNotes()" title="Jump straight to notes">✏</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ══════════ RIGHT — FAVOURITES PANEL ══════════ -->
