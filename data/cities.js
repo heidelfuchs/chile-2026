@@ -55,10 +55,10 @@ DESTINATIONS.push(
     lat: -22.4532, lng: -68.9253,
     summary: "Calama is the functional mining hub that most travellers pass through on their way to San Pedro de Atacama, 100km east. The city itself is serviceable rather than scenic, but it's the gateway to one of Earth's most extraordinary landscapes — the Atacama Desert, its salt flats, geysers and flamingo lagoons.",
     highlights: [
-      'San Pedro de Atacama (100km east) — the Atacama's spiritual heart; Valle de la Luna, El Tatio geysers, Salar de Atacama',
+      'San Pedro de Atacama (100km east) — the Atacama\'s spiritual heart; Valle de la Luna, El Tatio geysers, Salar de Atacama',
       'El Tatio Geyser Field (4,300m) — 80+ geysers steaming at dawn; accessible by tour from San Pedro',
       'Salar de Atacama — vast white salt expanse with flamingo lagoons and surreal mirror reflections',
-      'Laguna Cejar — salt lagoon where it's impossible to sink, surrounded by desert',
+      'Laguna Cejar — salt lagoon where it\'s impossible to sink, surrounded by desert',
       'Valley of the Moon — multi-coloured rock formations and otherworldly sunset hikes',
       'Los Flamencos National Park — James, Andean and Chilean flamingo colonies at multiple lagoons',
       'Atacama Archaeological Museum (San Pedro) — excellent pre-Hispanic artifact collection'
