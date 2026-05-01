@@ -33,8 +33,10 @@ function onNoteInput(id, el) {
       statusEl.textContent = 'Saved ✓';
       setTimeout(function() { statusEl.style.opacity = '0'; }, 1200);
     }
-    /* Refresh fav list in case note indicator changed */
+    /* Refresh fav list + list view note pips + map overlays */
     renderFavList(loadFavs());
+    renderList(currentFilter);
+    buildNoteOverlays();
   }, 600);
 }
 
@@ -251,14 +253,31 @@ function makeIcon(dest) {
 function makePopupHtml(dest) {
   var c      = CATS[dest.cat];
   var faved  = isFav(dest.id);
-  var btnBg  = faved ? '#cc0033' : c.color;
-  var btnLbl = faved ? '♥ Saved to favourites' : '♡ Add to favourites';
+  var noted  = hasNote(dest.id);
+  var favBg  = faved ? '#cc0033' : c.color;
+  var favLbl = faved ? '♥ Saved' : '♡ Save';
+  var noteLbl = noted ? '✏ Edit note' : '✏ Add note';
   return '<div class="pop-inner">'
     + '<div class="pop-name" style="color:' + c.color + '">' + dest.name + '</div>'
     + '<div class="pop-sub">' + dest.sub + '</div>'
-    + '<button class="pop-btn" style="background:' + btnBg + '"'
-    + ' onclick="toggleFavFromPopup(\'' + dest.id + '\')">' + btnLbl + '</button>'
+    + '<div class="pop-btns">'
+    +   '<button class="pop-btn pop-btn-fav" style="background:' + favBg + '"'
+    +   ' onclick="toggleFavFromPopup(\'' + dest.id + '\')">' + favLbl + '</button>'
+    +   '<button class="pop-btn pop-btn-note" onclick="goToNotes(\'' + dest.id + '\')">' + noteLbl + '</button>'
+    + '</div>'
     + '</div>';
+}
+
+function goToNotes(id) {
+  map.closePopup();
+  showDetail(id);
+  /* Wait for detail panel to render, then scroll textarea into view */
+  setTimeout(function() {
+    var ta = document.getElementById('noteTextarea');
+    if (!ta) return;
+    ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ta.focus();
+  }, 220);
 }
 
 function toggleFavFromPopup(id) {
@@ -282,6 +301,89 @@ DESTINATIONS.forEach(function(dest) {
     })(dest));
   marker.bindPopup(makePopupHtml(dest), { closeButton: false, offset: [0, -4], maxWidth: 240 });
   markerStore[dest.id] = marker;
+});
+
+
+/* ────────────────────────────────────────────────────
+   NOTE OVERLAYS ON MAP
+   ──────────────────────────────────────────────────── */
+var noteOverlaysEnabled = true;
+var noteLayerGroup = L.layerGroup().addTo(map);
+
+function buildNoteOverlays() {
+  noteLayerGroup.clearLayers();
+  if (!noteOverlaysEnabled) return;
+
+  DESTINATIONS.forEach(function(dest) {
+    var note = loadNote(dest.id);
+    if (!note.trim()) return;
+    var c = CATS[dest.cat];
+    /* First line, max 52 chars */
+    var snippet = note.replace(/\n[\s\S]*/,'').substring(0, 52) + (note.replace(/\n[\s\S]*/,'').length > 52 ? '…' : '');
+    var icon = L.divIcon({
+      className: 'note-callout-anchor',
+      html: '<div class="note-callout-bubble" style="--nc:#' + c.color.replace('#','') + '">'
+          + escHtml(snippet)
+          + '</div>',
+      iconSize:   [0, 0],
+      iconAnchor: [-14, 8]   /* bubble starts 14px right of the dot */
+    });
+    L.marker([dest.lat, dest.lng], { icon: icon, interactive: false, zIndexOffset: -300 })
+      .addTo(noteLayerGroup);
+  });
+
+  /* Run overlap avoidance after Leaflet has painted */
+  requestAnimationFrame(avoidNoteOverlaps);
+}
+
+function avoidNoteOverlaps() {
+  var bubbles = Array.from(document.querySelectorAll('.note-callout-bubble'));
+  if (bubbles.length < 2) return;
+
+  /* Reset any previous adjustments */
+  bubbles.forEach(function(b) { b.style.transform = ''; });
+
+  /* Snapshot positions after reset */
+  var items = bubbles.map(function(b) {
+    var r = b.getBoundingClientRect();
+    return { el: b, top: r.top, bottom: r.bottom, left: r.left, right: r.right, dy: 0 };
+  });
+
+  /* Sort top-to-bottom so we push downward only */
+  items.sort(function(a, b) { return a.top - b.top; });
+
+  /* Single downward pass — O(n²) fine for <100 notes */
+  for (var i = 0; i < items.length; i++) {
+    for (var j = i + 1; j < items.length; j++) {
+      var a = items[i], b = items[j];
+      /* Skip if no horizontal overlap (6px breathing room) */
+      if (a.right + 6 < b.left || b.right + 6 < a.left) continue;
+      /* Push b down if it overlaps a vertically */
+      var gap = b.top - a.bottom;
+      if (gap < 5) {
+        var push = 5 - gap;
+        b.dy += push;
+        b.top += push;
+        b.bottom += push;
+        b.el.style.transform = 'translateY(' + b.dy + 'px)';
+      }
+    }
+  }
+}
+
+function toggleNoteOverlays() {
+  noteOverlaysEnabled = !noteOverlaysEnabled;
+  var btn = document.getElementById('noteToggleBtn');
+  if (btn) {
+    btn.classList.toggle('active', noteOverlaysEnabled);
+    btn.title = noteOverlaysEnabled ? 'Hide notes on map' : 'Show notes on map';
+  }
+  buildNoteOverlays();
+}
+
+/* Rebuild on map movement so overlaps are re-checked at new zoom/pan */
+map.on('zoomend moveend', function() {
+  if (noteOverlaysEnabled) requestAnimationFrame(avoidNoteOverlaps);
 });
 
 
@@ -450,3 +552,4 @@ function doFilter(cat, btn) {
    ──────────────────────────────────────────────────── */
 renderList('all');
 syncFavUI();
+buildNoteOverlays();
