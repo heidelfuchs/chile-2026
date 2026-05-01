@@ -664,8 +664,114 @@ function doFilter(cat, btn) {
 
 
 /* ────────────────────────────────────────────────────
+   TRANSPORT LAYERS — Airports, Bus Terminals, Ferries
+   ──────────────────────────────────────────────────── */
+var transportLayers = {
+  airports: L.layerGroup(),
+  buses:    L.layerGroup(),
+  ferries:  L.layerGroup()
+};
+var transportActive = { airports: false, buses: false, ferries: false };
+var TRANSPORT_KEY = 'chile-trip-2026-transport';
+
+/* Marker icon factory */
+function makeTransportIcon(emoji, cssClass) {
+  return L.divIcon({
+    className: '',
+    html: '<div class="t-marker ' + cssClass + '">' + emoji + '</div>',
+    iconSize:   null,
+    iconAnchor: [20, 10]
+  });
+}
+
+/* Popup HTML factory */
+function makeTransportPopup(item, type) {
+  var colors = { airports: '#0369A1', buses: '#15803D', ferries: '#0E7490' };
+  var color  = colors[type];
+  var extra  = '';
+  if (type === 'airports') {
+    extra = '<div style="font-size:11px;color:#555;margin-top:5px">✈ ' + escHtml(item.airlines) + '</div>';
+  } else if (type === 'buses') {
+    extra = '<div style="font-size:11px;color:#555;margin-top:5px">🗺 ' + escHtml(item.routes) + '</div>'
+           +'<div style="font-size:11px;color:#777;margin-top:3px">🚌 ' + escHtml(item.operators) + '</div>';
+  } else if (type === 'ferries') {
+    extra = '<div style="font-size:11px;color:#555;margin-top:5px">⛴ ' + escHtml(item.routes) + '</div>'
+           +'<div style="font-size:11px;color:#777;margin-top:3px">⏱ ' + escHtml(item.crossing) + '</div>';
+  }
+  return '<div class="pop-inner">'
+    + '<div class="pop-name" style="color:' + color + '">' + escHtml(item.name) + '</div>'
+    + '<div class="pop-sub">' + escHtml(item.city)
+    + (item.iata ? ' &nbsp;·&nbsp; <strong>' + item.iata + '</strong>' : '') + '</div>'
+    + extra
+    + '<div style="font-size:11px;color:#888;margin-top:6px;line-height:1.45;border-top:1px solid #eee;padding-top:5px">'
+    + escHtml(item.info) + '</div>'
+    + '</div>';
+}
+
+/* Build each layer from its data array */
+function buildTransportLayers() {
+  /* Airports */
+  (AIRPORTS || []).forEach(function(a) {
+    L.marker([a.lat, a.lng], { icon: makeTransportIcon('✈', 't-marker-airport'), zIndexOffset: 200 })
+      .bindPopup(makeTransportPopup(a, 'airports'), { maxWidth: 280, closeButton: false })
+      .addTo(transportLayers.airports);
+  });
+
+  /* Bus Terminals */
+  (BUS_TERMINALS || []).forEach(function(b) {
+    L.marker([b.lat, b.lng], { icon: makeTransportIcon('🚌', 't-marker-bus'), zIndexOffset: 200 })
+      .bindPopup(makeTransportPopup(b, 'buses'), { maxWidth: 280, closeButton: false })
+      .addTo(transportLayers.buses);
+  });
+
+  /* Ferry Terminals */
+  (FERRY_TERMINALS || []).forEach(function(f) {
+    L.marker([f.lat, f.lng], { icon: makeTransportIcon('⛴', 't-marker-ferry'), zIndexOffset: 200 })
+      .bindPopup(makeTransportPopup(f, 'ferries'), { maxWidth: 280, closeButton: false })
+      .addTo(transportLayers.ferries);
+  });
+}
+
+/* Toggle a layer on/off */
+function toggleTransportLayer(type) {
+  transportActive[type] = !transportActive[type];
+  var btn = document.getElementById(
+    type === 'airports' ? 'btnAirports' : type === 'buses' ? 'btnBuses' : 'btnFerries'
+  );
+  if (transportActive[type]) {
+    transportLayers[type].addTo(map);
+    if (btn) btn.classList.add('active');
+  } else {
+    transportLayers[type].remove();
+    if (btn) btn.classList.remove('active');
+  }
+  saveTransportState();
+}
+
+/* Persist and restore state */
+function saveTransportState() {
+  try { localStorage.setItem(TRANSPORT_KEY, JSON.stringify(transportActive)); } catch(e) {}
+}
+function restoreTransportState() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(TRANSPORT_KEY));
+    if (!saved) return;
+    ['airports', 'buses', 'ferries'].forEach(function(type) {
+      if (saved[type]) {
+        /* Force active = false first so toggle flips it on */
+        transportActive[type] = false;
+        toggleTransportLayer(type);
+      }
+    });
+  } catch(e) {}
+}
+
+
+/* ────────────────────────────────────────────────────
    INIT
    ──────────────────────────────────────────────────── */
 renderList('all');
 syncFavUI();
 buildNoteOverlays();
+buildTransportLayers();
+restoreTransportState();
