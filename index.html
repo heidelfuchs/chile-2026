@@ -309,12 +309,96 @@
     }
     .fav-remove:hover { color: #E03; }
     .fav-footer {
-      padding: 11px 18px;
+      padding: 11px 14px;
       border-top: 1px solid var(--border);
       font-size: 11px;
       color: var(--text3);
       text-align: center;
       flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .fav-footer-note { font-size: 10px; color: var(--text3); }
+
+    /* Export button */
+    .export-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text2);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      font-family: inherit;
+    }
+    .export-btn:hover {
+      background: var(--text);
+      color: var(--surface);
+      border-color: var(--text);
+    }
+
+    /* Notes textarea */
+    .d-notes-wrap { margin-top: 18px; }
+    .d-notes-textarea {
+      width: 100%;
+      min-height: 88px;
+      padding: 9px 11px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.55;
+      resize: vertical;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .d-notes-textarea:focus {
+      outline: none;
+      border-color: var(--text3);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+    }
+    .d-notes-textarea::placeholder { color: var(--text3); }
+    .d-notes-status {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 4px;
+      text-align: right;
+      min-height: 14px;
+      transition: opacity 0.4s;
+    }
+
+    /* Note indicator pip (amber dot) */
+    .note-pip {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #F59E0B;
+      vertical-align: middle;
+      margin-left: 3px;
+      flex-shrink: 0;
+    }
+    /* Note preview line in fav panel */
+    .fav-note {
+      font-size: 10px;
+      color: #D97706;
+      margin-top: 3px;
+      font-style: italic;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    @media (prefers-color-scheme: dark) {
+      .fav-note { color: #FCD34D; }
     }
 
     /* ─── LEAFLET OVERRIDES ──────────────────────────── */
@@ -436,7 +520,12 @@
         Click <strong>Save</strong> on any destination<br>to build your shortlist here.
       </div>
     </div>
-    <div class="fav-footer">Saved across sessions via local storage</div>
+    <div class="fav-footer">
+      <button class="export-btn" onclick="exportFavourites()">
+        ↓ Export favourites as Markdown
+      </button>
+      <span class="fav-footer-note">Includes all details &amp; your notes · saves as .md file</span>
+    </div>
   </div>
 
 </div>
