@@ -318,8 +318,9 @@ function buildNoteOverlays() {
     var note = loadNote(dest.id);
     if (!note.trim()) return;
     var c = CATS[dest.cat];
-    /* First line, max 52 chars */
-    var snippet = note.replace(/\n[\s\S]*/,'').substring(0, 52) + (note.replace(/\n[\s\S]*/,'').length > 52 ? '…' : '');
+    /* First line, max 90 chars */
+    var firstLine = note.replace(/\n[\s\S]*/,'');
+    var snippet = firstLine.substring(0, 90) + (firstLine.length > 90 ? '…' : '');
     var icon = L.divIcon({
       className: 'note-callout-anchor',
       html: '<div class="note-callout-bubble" style="--nc:#' + c.color.replace('#','') + '">'
