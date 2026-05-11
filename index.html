@@ -318,6 +318,24 @@
       align-self: center;
     }
     .fav-remove:hover { color: #E03; }
+
+    /* ─── DRAG & DROP REORDERING ────────────────────────── */
+    .fav-drag-handle {
+      cursor: grab;
+      color: var(--text3);
+      font-size: 13px;
+      flex-shrink: 0;
+      align-self: center;
+      opacity: 0.35;
+      user-select: none;
+      padding-right: 2px;
+      line-height: 1;
+    }
+    .fav-drag-handle:active { cursor: grabbing; }
+    .fav-item:hover .fav-drag-handle { opacity: 0.65; }
+    .fav-item.dragging  { opacity: 0.3; }
+    .fav-item.drag-over { border-top: 2px solid #6366F1; margin-top: -1px; }
+
     .fav-footer {
       padding: 11px 14px;
       border-top: 1px solid var(--border);
@@ -561,6 +579,24 @@
     .t-marker-airport { background: #0369A1; }
     .t-marker-bus     { background: #15803D; }
     .t-marker-ferry   { background: #0E7490; }
+
+    /* ─── ROUTE LAYER ───────────────────────────────────── */
+    .transport-btn.route.active { background: #6366F1; }
+
+    @keyframes route-dash { to { stroke-dashoffset: -14; } }
+    .route-line { animation: route-dash 0.5s linear infinite; }
+
+    .route-num {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #6366F1;
+      color: white;
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid white;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.45);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
 
     /* ─── MOBILE-ONLY ELEMENTS (hidden on desktop) ──── */
     .mobile-map-btn,
@@ -870,6 +906,7 @@
       <button class="transport-btn airports" id="btnAirports" onclick="toggleTransportLayer('airports')">✈ Airports</button>
       <button class="transport-btn buses"    id="btnBuses"    onclick="toggleTransportLayer('buses')">🚌 Buses</button>
       <button class="transport-btn ferries"  id="btnFerries"  onclick="toggleTransportLayer('ferries')">⛴ Ferries</button>
+      <button class="transport-btn route"    id="btnRoute"    onclick="toggleRouteLayer()">〰 Route</button>
     </div>
 
     <button class="note-toggle active" id="noteToggleBtn"

@@ -104,6 +104,7 @@ function syncFavUI() {
 
   renderFavList(favs);
   if (currentDetailId) updateFavBtn(currentDetailId);
+  if (routeActive) buildRouteLayer();
 }
 
 function renderFavList(favs) {
@@ -123,7 +124,8 @@ function renderFavList(favs) {
     var noteHtml = note
       ? '<div class="fav-note">✏ ' + escHtml(note.split('\n')[0].substring(0, 60)) + (note.length > 60 ? '…' : '') + '</div>'
       : '';
-    return '<div class="fav-item" onclick="showDetail(\'' + d.id + '\')">'
+    return '<div class="fav-item" draggable="true" data-id="' + d.id + '" onclick="showDetail(\'' + d.id + '\')">'
+      + '<div class="fav-drag-handle" title="Drag to reorder">⠿</div>'
       + '<div class="fav-dot" style="background:' + c.color + '"></div>'
       + '<div class="fav-info">'
       +   '<div class="fav-name">' + d.name + (note ? ' <span class="note-pip" title="Has notes"></span>' : '') + '</div>'
@@ -134,7 +136,71 @@ function renderFavList(favs) {
       + '<button class="fav-remove" title="Remove" onclick="event.stopPropagation();removeFav(\'' + d.id + '\')">×</button>'
       + '</div>';
   }).join('');
+  initFavDrag();
 }
+
+/* ────────────────────────────────────────────────────
+   FAVOURITES — DRAG & DROP REORDERING
+   ──────────────────────────────────────────────────── */
+var _dragSrcId = null;
+
+function initFavDrag() {
+  var list  = document.getElementById('favList');
+  var items = list ? list.querySelectorAll('.fav-item[draggable]') : [];
+
+  items.forEach(function(el) {
+
+    el.addEventListener('dragstart', function(e) {
+      _dragSrcId = el.dataset.id;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', _dragSrcId);
+      /* Defer class so the drag image captures the un-dimmed element */
+      setTimeout(function() { el.classList.add('dragging'); }, 0);
+    });
+
+    el.addEventListener('dragend', function() {
+      el.classList.remove('dragging');
+      list.querySelectorAll('.fav-item').forEach(function(x) {
+        x.classList.remove('drag-over');
+      });
+    });
+
+    el.addEventListener('dragover', function(e) {
+      if (!_dragSrcId || el.dataset.id === _dragSrcId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      /* Highlight only the current target */
+      list.querySelectorAll('.fav-item').forEach(function(x) {
+        x.classList.remove('drag-over');
+      });
+      el.classList.add('drag-over');
+    });
+
+    el.addEventListener('drop', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      el.classList.remove('drag-over');
+      var targetId = el.dataset.id;
+      if (!_dragSrcId || _dragSrcId === targetId) { _dragSrcId = null; return; }
+
+      var favs    = loadFavs();
+      var fromIdx = favs.indexOf(_dragSrcId);
+      if (fromIdx === -1) { _dragSrcId = null; return; }
+
+      /* Remove from original slot, then insert before target */
+      favs.splice(fromIdx, 1);
+      var toIdx = favs.indexOf(targetId);
+      if (toIdx === -1) { _dragSrcId = null; return; }
+      favs.splice(toIdx, 0, _dragSrcId);
+
+      _dragSrcId = null;
+      saveFavs(favs);
+      syncFavUI();
+    });
+
+  });
+}
+
 
 function openFavPanel() {
   closeMobileCard();
@@ -768,6 +834,80 @@ function restoreTransportState() {
 
 
 /* ────────────────────────────────────────────────────
+   ROUTE LAYER — Animated polyline + numbered markers
+   ──────────────────────────────────────────────────── */
+var routeLayer  = L.layerGroup();
+var routeActive = false;
+var ROUTE_KEY   = 'chile-trip-2026-route';
+
+function buildRouteLayer() {
+  routeLayer.clearLayers();
+  if (!routeActive) return;
+
+  var favs = loadFavs();
+  var dests = favs
+    .map(function(id) { return DESTINATIONS.find(function(x) { return x.id === id; }); })
+    .filter(Boolean);
+
+  if (!dests.length) return;
+
+  var pts = dests.map(function(d) { return [d.lat, d.lng]; });
+
+  /* Animated dashed polyline (needs at least 2 points) */
+  if (pts.length >= 2) {
+    L.polyline(pts, {
+      color:     '#6366F1',
+      weight:    2.5,
+      opacity:   0.85,
+      dashArray: '8 6',
+      className: 'route-line'
+    }).addTo(routeLayer);
+  }
+
+  /* Numbered stop marker at each favourite */
+  pts.forEach(function(pt, i) {
+    L.marker(pt, {
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="route-num">' + (i + 1) + '</div>',
+        iconSize:   [20, 20],
+        iconAnchor: [10, 10]
+      }),
+      interactive: false,
+      zIndexOffset: 500
+    }).addTo(routeLayer);
+  });
+}
+
+function toggleRouteLayer() {
+  routeActive = !routeActive;
+  var btn = document.getElementById('btnRoute');
+  if (routeActive) {
+    routeLayer.addTo(map);
+    buildRouteLayer();
+    if (btn) btn.classList.add('active');
+  } else {
+    routeLayer.remove();
+    if (btn) btn.classList.remove('active');
+  }
+  saveRouteState();
+}
+
+function saveRouteState() {
+  try { localStorage.setItem(ROUTE_KEY, routeActive ? '1' : '0'); } catch(e) {}
+}
+
+function restoreRouteState() {
+  try {
+    if (localStorage.getItem(ROUTE_KEY) === '1') {
+      routeActive = false;
+      toggleRouteLayer();
+    }
+  } catch(e) {}
+}
+
+
+/* ────────────────────────────────────────────────────
    INIT
    ──────────────────────────────────────────────────── */
 renderList('all');
@@ -775,3 +915,4 @@ syncFavUI();
 buildNoteOverlays();
 buildTransportLayers();
 restoreTransportState();
+restoreRouteState();
