@@ -587,6 +587,9 @@ function showList() {
   document.getElementById('destList').style.display = '';
   document.getElementById('detailPanel').classList.remove('visible');
   map.closePopup();
+  /* Restore fav button visibility (may have been hidden by city detail POI view) */
+  var favBtn = document.getElementById('favBtn');
+  if (favBtn) favBtn.style.visibility = '';
 }
 
 
@@ -598,6 +601,9 @@ function showDetail(id) {
   if (!d) return;
   currentDetailId = id;
   var c = CATS[d.cat];
+  /* Restore fav button (may have been hidden by city detail POI view) */
+  var favBtn = document.getElementById('favBtn');
+  if (favBtn) favBtn.style.visibility = '';
 
   /* Mobile: ensure sidebar is visible (list mode) */
   if (isMobile()) {

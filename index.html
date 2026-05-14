@@ -786,6 +786,24 @@
       .fav-note { color: #FCD34D; }
     }
 
+    /* ─── CITY DETAIL POI MARKERS ───────────────────── */
+    /* Neighbourhood label text: white halo for map readability */
+    .cd-nbhd-label-text {
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+      margin-top: 3px;
+      text-shadow:
+        -1px -1px 0 rgba(255,255,255,0.92),
+         1px -1px 0 rgba(255,255,255,0.92),
+        -1px  1px 0 rgba(255,255,255,0.92),
+         1px  1px 0 rgba(255,255,255,0.92),
+         0 0 5px white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      pointer-events: none;
+      line-height: 1;
+    }
+
     /* ─── LEAFLET OVERRIDES ──────────────────────────── */
     .leaflet-popup-content-wrapper {
       border-radius: 11px !important;
@@ -1381,8 +1399,8 @@
 <!-- ═══════════ SCRIPTS — order matters ═══════════ -->
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 
-<!-- 1. Bootstrap the global array -->
-<script>var DESTINATIONS = [];</script>
+<!-- 1. Bootstrap the global arrays -->
+<script>var DESTINATIONS = []; var CITY_DETAIL_LAYERS = [];</script>
 
 <!-- 2. Category config -->
 <script src="data/categories.js"></script>
@@ -1399,7 +1417,10 @@
 <script src="data/lago-ohiggins-viedma.js"></script>
 <script src="data/patagonia-towns.js"></script>
 
-<!-- 3b. Transport layer data (airports, buses, ferries) -->
+<!-- 3b. City detail layers (zoomed-in POIs per city) -->
+<script src="data/city-santiago-detail.js"></script>
+
+<!-- 3c. Transport layer data (airports, buses, ferries) -->
 <script src="data/airports.js"></script>
 <script src="data/busterminals.js"></script>
 <script src="data/ferries.js"></script>
@@ -1412,6 +1433,9 @@
 
 <!-- 5. Plan / itinerary logic -->
 <script src="plan.js"></script>
+
+<!-- 6. City detail layer logic (zoom-triggered POIs) -->
+<script src="city-detail.js"></script>
 
 </body>
 </html>
