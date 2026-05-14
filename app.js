@@ -908,6 +908,51 @@ function restoreRouteState() {
 
 
 /* ────────────────────────────────────────────────────
+   SIDEBAR RESIZE
+   ──────────────────────────────────────────────────── */
+var SIDEBAR_W_KEY    = 'chile-trip-2026-sidebar-w';
+var _sidebarDragging = false;
+
+(function() {
+  var resizer   = document.getElementById('sidebarResizer');
+  var sidebarEl = document.querySelector('.sidebar');
+  if (!resizer || !sidebarEl) return;
+
+  /* Restore saved width */
+  try {
+    var saved = localStorage.getItem(SIDEBAR_W_KEY);
+    if (saved) sidebarEl.style.width = saved;
+  } catch(e) {}
+
+  resizer.addEventListener('mousedown', function(e) {
+    if (isMobile()) return;
+    _sidebarDragging = true;
+    e.preventDefault();
+    document.body.style.cursor     = 'col-resize';
+    document.body.style.userSelect = 'none';
+    resizer.classList.add('active');
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!_sidebarDragging) return;
+    var w = Math.max(260, Math.min(e.clientX, Math.floor(window.innerWidth * 0.55)));
+    sidebarEl.style.width = w + 'px';
+    map.invalidateSize();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!_sidebarDragging) return;
+    _sidebarDragging = false;
+    document.body.style.cursor     = '';
+    document.body.style.userSelect = '';
+    resizer.classList.remove('active');
+    try { localStorage.setItem(SIDEBAR_W_KEY, sidebarEl.style.width); } catch(e) {}
+    map.invalidateSize();
+  });
+})();
+
+
+/* ────────────────────────────────────────────────────
    INIT
    ──────────────────────────────────────────────────── */
 renderList('all');

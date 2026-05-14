@@ -68,7 +68,19 @@
       flex-direction: column;
       overflow: hidden;
       z-index: 10;
+      position: relative;
     }
+    #sidebarResizer {
+      position: absolute;
+      top: 0; right: 0;
+      width: 5px; height: 100%;
+      cursor: col-resize;
+      z-index: 20;
+      transition: background 0.15s;
+    }
+    #sidebarResizer:hover,
+    #sidebarResizer.active { background: rgba(99,102,241,0.22); }
+    @media (max-width: 780px) { #sidebarResizer { display: none; } }
     .s-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .s-title  { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 2px; display: flex; align-items: center; gap: 9px; }
     .s-sub    { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
@@ -77,7 +89,352 @@
     .stat-val { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.1; }
     .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 1px; }
 
-    /* Filters */
+    /* ─── PLAN TABS ─────────────────────────────────── */
+    .s-tabs {
+      display: flex;
+      gap: 4px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .s-tab {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text2);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .s-tab:hover { background: var(--border); }
+    .s-tab.on    { background: var(--text); color: var(--surface); border-color: var(--text); }
+
+    /* ─── PLAN PANEL ─────────────────────────────────── */
+    .plan-panel {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .plan-summary {
+      padding: 10px 18px 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .plan-summary-empty { font-size: 12px; color: var(--text3); }
+    .plan-stats {
+      display: flex;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 6px;
+    }
+    .plan-status-bar {
+      display: flex;
+      height: 4px;
+      border-radius: 2px;
+      overflow: hidden;
+      background: var(--surface2);
+      margin-bottom: 5px;
+    }
+    .psb-seg { min-width: 4px; transition: flex 0.3s; }
+    .psb-confirmed { background: #16A34A; }
+    .psb-tentative { background: #D97706; }
+    .psb-dreaming  { background: #CBD5E1; }
+    .plan-status-legend { display: flex; gap: 10px; }
+    .psl { font-size: 10px; font-weight: 500; }
+    .psl-confirmed { color: #16A34A; }
+    .psl-tentative { color: #D97706; }
+    .psl-dreaming  { color: #94A3B8; }
+
+    .plan-dirty {
+      padding: 6px 18px;
+      background: #FEF3C7;
+      border-bottom: 1px solid #FDE68A;
+      font-size: 11px;
+      color: #92400E;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    @media (prefers-color-scheme: dark) {
+      .plan-dirty { background: #2D2410; border-bottom-color: #4A3410; color: #FCD34D; }
+    }
+
+    .plan-list { flex: 1; overflow-y: auto; }
+    .plan-list-empty {
+      padding: 2.5rem 18px;
+      text-align: center;
+      color: var(--text3);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    /* Stop row */
+    .plan-stop { border-bottom: 1px solid var(--border); }
+    .plan-stop.expanded { background: var(--surface2); }
+    .plan-stop.dragging  { opacity: 0.3; }
+    .plan-stop.drag-over { border-top: 2px solid #6366F1; }
+
+    .plan-stop-hd {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 9px 12px 9px 10px;
+    }
+    .plan-drag-handle {
+      cursor: grab;
+      color: var(--text3);
+      font-size: 13px;
+      flex-shrink: 0;
+      align-self: center;
+      opacity: 0.35;
+      user-select: none;
+      line-height: 1;
+    }
+    .plan-drag-handle:active { cursor: grabbing; }
+    .plan-stop:hover .plan-drag-handle { opacity: 0.65; }
+
+    .plan-stop-num {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      color: white;
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: 1px;
+    }
+    .plan-stop-main {
+      flex: 1; min-width: 0;
+      cursor: pointer;
+    }
+    .plan-stop-row1 {
+      display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+      margin-bottom: 2px;
+    }
+    .plan-stop-name  { font-size: 13px; font-weight: 500; line-height: 1.3; }
+    .plan-status-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.2px; flex-shrink: 0; }
+    .plan-stop-meta  { font-size: 11px; color: var(--text3); line-height: 1.4; }
+    .plan-stop-cat   { font-size: 10px; color: var(--text3); }
+
+    .plan-stop-toggle {
+      flex-shrink: 0;
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-size: 14px;
+      padding: 3px 5px; border-radius: 4px;
+      align-self: flex-start; margin-top: 2px;
+      transition: color 0.1s;
+    }
+    .plan-stop-toggle:hover { color: var(--text); }
+
+    /* Inline editor */
+    .plan-editor {
+      padding: 11px 16px 14px;
+      border-top: 1px solid var(--border);
+    }
+    .plan-field-group { margin-bottom: 10px; }
+    .plan-field-row {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .pfl {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text3); flex-shrink: 0;
+    }
+    .plan-field-row input[type="date"],
+    .plan-field-row input[type="number"],
+    .plan-field-row select,
+    .plan-field-group select {
+      padding: 4px 7px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+    }
+    .plan-nights-input { width: 54px; }
+    .plan-transport-details {
+      flex: 1; min-width: 0;
+      padding: 4px 7px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+    }
+    .plan-section-lbl {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text3);
+      margin-bottom: 4px; margin-top: 10px;
+    }
+    .plan-field-group .plan-section-lbl { margin-top: 0; }
+    .plan-note-ta {
+      width: 100%;
+      min-height: 62px;
+      padding: 7px 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      resize: vertical;
+      transition: border-color 0.15s;
+    }
+    .plan-note-ta:focus { outline: none; border-color: var(--text3); }
+    .plan-note-ta::placeholder { color: var(--text3); }
+    .plan-remove-btn {
+      margin-top: 12px;
+      background: none; border: 1px solid var(--border2);
+      color: var(--text3); font-size: 11px;
+      padding: 4px 10px; border-radius: var(--radius-sm);
+      cursor: pointer; font-family: inherit;
+      transition: all 0.12s;
+    }
+    .plan-remove-btn:hover { color: #E03; border-color: #E03; background: #fff0f0; }
+    @media (prefers-color-scheme: dark) { .plan-remove-btn:hover { background: #2a1010; } }
+
+    /* Add stop */
+    .plan-add-wrap {
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .plan-add-btn {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      border: 1.5px dashed var(--border2);
+      background: none;
+      color: var(--text2);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .plan-add-btn:hover { background: var(--surface2); border-color: var(--text3); color: var(--text); }
+
+    /* Plan footer */
+    .plan-footer {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      gap: 7px;
+    }
+    .plan-footer .export-btn { width: auto; }
+    .import-label {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text2);
+      font-size: 12px; font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      font-family: inherit;
+    }
+    .import-label:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
+
+    /* Add stop overlay */
+    .plan-add-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--surface);
+      z-index: 50;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .plan-add-search-wrap {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .plan-add-search-wrap input {
+      flex: 1;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 13px; font-family: inherit;
+    }
+    .plan-add-search-wrap input:focus {
+      outline: none; border-color: var(--text3); background: var(--surface);
+    }
+    .plan-add-close {
+      background: none; border: none; color: var(--text3);
+      font-size: 18px; cursor: pointer;
+      padding: 4px 6px; border-radius: 4px; flex-shrink: 0;
+    }
+    .plan-add-close:hover { color: var(--text); }
+    .plan-add-results { flex: 1; overflow-y: auto; }
+    .plan-add-result {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .plan-add-result:hover { background: var(--surface2); }
+    .plan-add-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .plan-add-info { flex: 1; min-width: 0; }
+    .plan-add-name { font-size: 13px; font-weight: 500; }
+    .plan-add-sub  { font-size: 11px; color: var(--text3); margin-top: 1px; }
+    .plan-no-results {
+      padding: 20px 16px; text-align: center;
+      color: var(--text3); font-size: 13px;
+    }
+    .plan-add-custom-wrap {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .plan-add-custom-wrap button {
+      width: 100%;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      border: 1.5px dashed var(--border2);
+      background: none; color: var(--text2);
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.12s;
+    }
+    .plan-add-custom-wrap button:hover { background: var(--surface2); }
+    .plan-custom-form {
+      padding: 10px 16px 14px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .plan-custom-form input {
+      display: block; width: 100%; margin-bottom: 7px;
+      padding: 7px 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface2); color: var(--text);
+      font-size: 13px; font-family: inherit;
+    }
+    .plan-custom-form input:focus {
+      outline: none; border-color: var(--text3); background: var(--surface);
+    }
+    .plan-custom-form button {
+      width: 100%; padding: 8px 12px;
+      border-radius: var(--radius-md); border: none;
+      background: var(--text); color: var(--surface);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    .plan-custom-form button:hover { opacity: 0.88; }
+
+    /* ─── Filters */
     .s-filters {
       padding: 10px 16px;
       border-bottom: 1px solid var(--border);
@@ -841,9 +1198,13 @@
         <div class="stat"><div class="stat-val">4</div><div class="stat-lbl">family stops</div></div>
         <div class="stat"><div class="stat-val">4,300<span style="font-size:10px;font-weight:400">km</span></div><div class="stat-lbl">north to south</div></div>
       </div>
+      <div class="s-tabs">
+        <button class="s-tab on" id="tabDests" onclick="switchToDestinationsMode()">Destinations</button>
+        <button class="s-tab"    id="tabPlan"  onclick="switchToPlanMode()">Plan</button>
+      </div>
     </div>
 
-    <div class="s-filters">
+    <div class="s-filters" id="sFilters">
       <button class="filt on"  onclick="doFilter('all',this)">All</button>
       <button class="filt" onclick="doFilter('family',this)">
         <span class="filt-dot" style="background:var(--family)"></span>Family
@@ -880,9 +1241,56 @@
         </div>
         <div class="detail-scroll" id="detailContent"></div>
       </div>
+
+      <!-- ══ PLAN PANEL ══ -->
+      <div class="plan-panel" id="planPanel" style="display:none">
+
+        <div class="plan-summary" id="planSummary"></div>
+
+        <div class="plan-dirty" id="planDirty" style="display:none">
+          ● Unpublished changes — export to publish
+        </div>
+
+        <div class="plan-list" id="planList"></div>
+
+        <div class="plan-add-wrap">
+          <button class="plan-add-btn" onclick="openAddStop()">+ Add stop</button>
+        </div>
+
+        <div class="plan-footer">
+          <button class="export-btn" style="flex:2" onclick="exportPlan()">↓ Export plan_data.js</button>
+          <label class="import-label">
+            ↑ Import
+            <input type="file" accept=".js" onchange="importPlan(event)" style="display:none">
+          </label>
+        </div>
+
+        <!-- Add stop overlay — covers the plan panel -->
+        <div class="plan-add-overlay" id="planAddOverlay" style="display:none">
+          <div class="plan-add-search-wrap">
+            <input type="text" id="planAddSearchInput"
+                   placeholder="Search destinations…"
+                   oninput="filterPlanSearch(this.value)"
+                   autocomplete="off">
+            <button class="plan-add-close" onclick="closeAddStop()">✕</button>
+          </div>
+          <div class="plan-add-results" id="planAddResults"></div>
+          <div class="plan-add-custom-wrap">
+            <button onclick="toggleCustomStopForm()">+ Custom stop (not on map)</button>
+          </div>
+          <div class="plan-custom-form" id="planCustomForm" style="display:none">
+            <input type="text" id="customStopName"
+                   placeholder="Stop name (e.g. Paso Huahum border crossing)">
+            <input type="text" id="customStopLoc"
+                   placeholder="Location label (optional)">
+            <button onclick="addCustomPlanStop()">Add to plan</button>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <div class="s-legend">
+    <div class="s-legend" id="sLegend">
       <div class="leg-item"><span class="leg-dot" style="background:var(--family)"></span>Family</div>
       <div class="leg-item"><span class="leg-dot" style="background:var(--adventure)"></span>Adventure</div>
       <div class="leg-item"><span class="leg-dot" style="background:var(--wine)"></span>Wine</div>
@@ -892,6 +1300,7 @@
       <div class="leg-item"><span class="leg-dot" style="background:var(--hiking)"></span>More Hiking</div>
       <div class="leg-item"><span class="leg-dot" style="background:var(--cities)"></span>Cities &amp; Towns</div>
     </div>
+    <div id="sidebarResizer"></div>
   </div>
 
   <!-- ══════════ MAP ══════════ -->
@@ -987,14 +1396,21 @@
 <script src="data/events.js"></script>
 <script src="data/hiking.js"></script>
 <script src="data/cities.js"></script>
+<script src="data/lago-ohiggins-viedma.js"></script>
 
 <!-- 3b. Transport layer data (airports, buses, ferries) -->
 <script src="data/airports.js"></script>
 <script src="data/busterminals.js"></script>
 <script src="data/ferries.js"></script>
 
+<!-- 3c. Committed itinerary (empty stub until first export) -->
+<script src="data/plan_data.js"></script>
+
 <!-- 4. App logic -->
 <script src="app.js"></script>
+
+<!-- 5. Plan / itinerary logic -->
+<script src="plan.js"></script>
 
 </body>
 </html>
