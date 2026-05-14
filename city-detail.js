@@ -18,7 +18,16 @@ var CD_TYPES = {
   park:         { color: '#3D7A2F', bg: '#F0FDF4', fg: '#14532D', label: 'Park'      },
   sight:        { color: '#D97706', bg: '#FEF3C7', fg: '#92400E', label: 'Sight'     },
   market:       { color: '#D97706', bg: '#FEF3C7', fg: '#92400E', label: 'Market'    },
-  viewpoint:    { color: '#0369A1', bg: '#E0F2FE', fg: '#075985', label: 'Viewpoint' }
+  viewpoint:    { color: '#0369A1', bg: '#E0F2FE', fg: '#075985', label: 'Viewpoint' },
+  /* ── Pucón/outdoor region types ─────────────────── */
+  hotspring:    { color: '#EA580C', bg: '#FFF7ED', fg: '#9A3412', label: 'Hot Spring' },
+  volcano:      { color: '#7F1D1D', bg: '#FEF2F2', fg: '#991B1B', label: 'Volcano'   },
+  lake:         { color: '#0E7490', bg: '#ECFEFF', fg: '#155E75', label: 'Lake'      },
+  river:        { color: '#0E7490', bg: '#ECFEFF', fg: '#155E75', label: 'River'     },
+  forest:       { color: '#3D7A2F', bg: '#F0FDF4', fg: '#14532D', label: 'Forest'    },
+  beach:        { color: '#0E7490', bg: '#ECFEFF', fg: '#155E75', label: 'Beach'     },
+  waterfall:    { color: '#0E7490', bg: '#ECFEFF', fg: '#155E75', label: 'Waterfall' },
+  practical:    { color: '#64748B', bg: '#F1F5F9', fg: '#475569', label: 'Practical' }
 };
 
 var CD_METRO_LINE_COLORS = {
