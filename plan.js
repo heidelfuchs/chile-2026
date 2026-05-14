@@ -513,11 +513,15 @@ function closeAddStop() {
 
 function filterPlanSearch(query) {
   var plan    = loadPlan();
-  var usedIds = plan.map(function(s) { return s.destId; }).filter(Boolean);
   var q       = query.toLowerCase().trim();
 
+  /* Count how many times each destId already appears in the plan */
+  var countMap = {};
+  plan.forEach(function(s) {
+    if (s.destId) countMap[s.destId] = (countMap[s.destId] || 0) + 1;
+  });
+
   var results = DESTINATIONS.filter(function(d) {
-    if (usedIds.indexOf(d.id) !== -1) return false;
     if (!q) return true;
     return d.name.toLowerCase().indexOf(q) !== -1
         || d.sub.toLowerCase().indexOf(q)  !== -1;
@@ -527,19 +531,24 @@ function filterPlanSearch(query) {
   if (!el) return;
 
   if (!results.length) {
-    el.innerHTML = '<div class="plan-no-results">'
-      + (q ? 'No destinations found for "' + escHtml(q) + '"' : 'All destinations already added.')
-      + '</div>';
+    el.innerHTML = '<div class="plan-no-results">No destinations found for "' + escHtml(q) + '"</div>';
     return;
   }
 
   el.innerHTML = results.map(function(d) {
-    var c = CATS[d.cat];
+    var c     = CATS[d.cat];
+    var count = countMap[d.id] || 0;
+    var alreadyHtml = count > 0
+      ? '<div style="font-size:10px;color:var(--text3);margin-top:1px">'
+        + (count === 1 ? 'Already in plan · adding again' : 'In plan ' + count + '× · adding again')
+        + '</div>'
+      : '';
     return '<div class="plan-add-result" onclick="addDestToPlan(\'' + d.id + '\')">'
       + '<span class="plan-add-dot" style="background:' + c.color + '"></span>'
       + '<div class="plan-add-info">'
       +   '<div class="plan-add-name">' + escHtml(d.name) + '</div>'
       +   '<div class="plan-add-sub">'  + escHtml(d.sub)  + '</div>'
+      +   alreadyHtml
       + '</div>'
       + '</div>';
   }).join('');
