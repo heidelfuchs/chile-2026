@@ -463,6 +463,12 @@ DESTINATIONS.forEach(function(dest) {
 
   marker.bindPopup(makePopupHtml(dest), { closeButton: false, offset: [0, -4], maxWidth: 240 });
   markerStore[dest.id] = marker;
+
+  if (dest.cat === 'events') {
+    marker.setOpacity(0);
+    var el = marker.getElement();
+    if (el) el.style.pointerEvents = 'none';
+  }
 });
 
 
@@ -557,7 +563,7 @@ var currentFilter = 'all';
 
 function renderList(filter) {
   var visible = filter === 'all'
-    ? DESTINATIONS
+    ? DESTINATIONS.filter(function(d) { return d.cat !== 'events'; })
     : DESTINATIONS.filter(function(d) { return d.cat === filter; });
   document.getElementById('statCount').textContent = visible.length;
   document.getElementById('destList').innerHTML = visible.map(function(d) {
@@ -717,9 +723,11 @@ function doFilter(cat, btn) {
   renderList(cat);
 
   DESTINATIONS.forEach(function(d) {
-    var m       = markerStore[d.id];
-    var visible = cat === 'all' || d.cat === cat;
-    m.setOpacity(visible ? 1 : 0.1);
+    var m        = markerStore[d.id];
+    var isEvent  = d.cat === 'events';
+    var visible  = isEvent ? (cat === 'events') : (cat === 'all' || d.cat === cat);
+    var opacity  = isEvent ? (visible ? 1 : 0) : (visible ? 1 : 0.1);
+    m.setOpacity(opacity);
     var el = m.getElement();
     if (el) el.style.pointerEvents = visible ? 'auto' : 'none';
   });
