@@ -34,7 +34,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-11-02",
     "dateTo": "2026-11-09",
     "nights": 7,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "flight",
       "details": ""
@@ -55,7 +55,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-11-09",
     "dateTo": "2026-11-09",
     "nights": 0,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "flight",
       "details": ""
@@ -76,7 +76,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-11-09",
     "dateTo": "2026-11-11",
     "nights": 2,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "bus",
       "details": ""
@@ -97,7 +97,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-11-11",
     "dateTo": "2026-11-14",
     "nights": 3,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "other",
       "details": ""
@@ -118,7 +118,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-11-14",
     "dateTo": "2026-11-21",
     "nights": 7,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "other",
       "details": ""
@@ -139,7 +139,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-11-21",
     "dateTo": "2026-11-28",
     "nights": 7,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "other",
       "details": ""
@@ -160,7 +160,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-11-28",
     "dateTo": "2026-12-04",
     "nights": 6,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "other",
       "details": ""
@@ -181,7 +181,7 @@ var PLAN_DATA = [
     "dateFrom": "2026-12-04",
     "dateTo": "2026-12-18",
     "nights": 14,
-    "status": "confirmed",
+    "status": "tentative",
     "transport": {
       "mode": "bus",
       "details": ""
