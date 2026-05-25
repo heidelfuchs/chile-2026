@@ -320,6 +320,59 @@
     }
     .plan-add-btn:hover { background: var(--surface2); border-color: var(--text3); color: var(--text); }
 
+    /* Route line in summary */
+    .plan-route {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 7px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+    .plan-route-arrow { color: var(--text3); margin: 0 2px; }
+
+    /* Trip-level notes section */
+    .plan-trip-notes-wrap {
+      padding: 10px 18px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .plan-trip-notes-lbl {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text3);
+      margin-bottom: 5px;
+    }
+    .plan-trip-notes-ta {
+      width: 100%;
+      min-height: 64px;
+      padding: 7px 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      resize: vertical;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .plan-trip-notes-ta:focus {
+      outline: none;
+      border-color: var(--text3);
+      background: var(--surface);
+    }
+    .plan-trip-notes-ta::placeholder { color: var(--text3); }
+    .plan-trip-notes-status {
+      font-size: 10px;
+      color: var(--text3);
+      text-align: right;
+      margin-top: 3px;
+      min-height: 13px;
+      transition: opacity 0.4s;
+    }
+
     /* Plan budget line in summary */
     .plan-budget-line {
       font-size: 11px;
@@ -1437,6 +1490,14 @@
       <div class="plan-panel" id="planPanel" style="display:none">
 
         <div class="plan-summary" id="planSummary"></div>
+
+        <div class="plan-trip-notes-wrap" id="planTripNotes" style="display:none">
+          <div class="plan-trip-notes-lbl">Trip notes</div>
+          <textarea id="planTripNotesTa" class="plan-trip-notes-ta"
+                    placeholder="Flights booked, group decisions, links, anything trip-wide…"
+                    oninput="onTripNotesInput(this)"></textarea>
+          <div class="plan-trip-notes-status" id="planTripNotesStatus"></div>
+        </div>
 
         <div class="plan-view-toggle" id="planViewToggle" style="display:none">
           <button class="plan-view-btn on" id="pvBtnList"     onclick="switchPlanView('list')">List</button>
