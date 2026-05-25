@@ -16,12 +16,12 @@ var PLAN_DATA = [
     "status": "confirmed",
     "transport": {
       "mode": "flight",
-      "details": "Ankunft aus Deutschland"
+      "details": ""
     },
     "notes": {
-      "accommodation": "Keine Uebernachtung, direkt weiter nach Norden",
-      "toBook": "Anschluss nach Norden, San Pedro",
-      "questions": "Wie kommen wir nach San Pedro? ",
+      "accommodation": "",
+      "toBook": "",
+      "questions": "",
       "general": ""
     }
   },
@@ -40,8 +40,8 @@ var PLAN_DATA = [
       "details": ""
     },
     "notes": {
-      "accommodation": "Noch zu Planen...",
-      "toBook": "Unterkunft und Ausfluege",
+      "accommodation": "",
+      "toBook": "",
       "questions": "",
       "general": ""
     }
@@ -57,12 +57,12 @@ var PLAN_DATA = [
     "nights": 0,
     "status": "confirmed",
     "transport": {
-      "mode": "flight",
+      "mode": "bus",
       "details": ""
     },
     "notes": {
-      "accommodation": "Nur Durchfahrt. ",
-      "toBook": "Bus nach San Vincente",
+      "accommodation": "",
+      "toBook": "",
       "questions": "",
       "general": ""
     }
@@ -82,9 +82,9 @@ var PLAN_DATA = [
       "details": ""
     },
     "notes": {
-      "accommodation": "Hier bleiben wir vermutlich bei Freunden, muessen aber noch klar machen, dass alle hin passen. Sonst was buchen. Kurz trip.",
+      "accommodation": "",
       "toBook": "",
-      "questions": "Machen wir Ausfluege oder bleiben wir in San Vicente? ",
+      "questions": "",
       "general": ""
     }
   },
@@ -103,8 +103,8 @@ var PLAN_DATA = [
       "details": ""
     },
     "notes": {
-      "accommodation": "Hier brauchen wir etwas Platz und es muss in der Naehe von Tina sein.",
-      "toBook": "Unterkunft",
+      "accommodation": "",
+      "toBook": "",
       "questions": "",
       "general": ""
     }
@@ -124,8 +124,8 @@ var PLAN_DATA = [
       "details": ""
     },
     "notes": {
-      "accommodation": "Das ist ein laengerer Stay, wir brauchen also eine gute Unterkunft fuer mehrere Leute, die als homebase gelten kann.",
-      "toBook": "Es gibt einiges zu tun inkl. mehrtages Touren. Wir koennen hier als Gruppe jeder flexibel sein. Villarica und Pucon sind gut verbunden. Letzteres hat definitiv mehr zu bieten.",
+      "accommodation": "",
+      "toBook": "",
       "questions": "",
       "general": ""
     }
@@ -166,8 +166,8 @@ var PLAN_DATA = [
       "details": ""
     },
     "notes": {
-      "accommodation": "Eventuell bei Kiras Onkel (Zelten?) - Muessen wir klaeren.",
-      "toBook": "Besuch bei ",
+      "accommodation": "",
+      "toBook": "",
       "questions": "",
       "general": ""
     }
