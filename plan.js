@@ -178,6 +178,27 @@ function updatePlanSummary() {
       + '</div>'
     : '';
 
+  /* Budget summary */
+  var FX = { EUR: 1, USD: 0.92, CLP: 0.00087 };
+  var budgetEur = 0;
+  var hasBudget = false;
+  plan.forEach(function(s) {
+    if (s.budget && s.budget.amount != null && s.budget.amount > 0) {
+      hasBudget = true;
+      var rate = FX[s.budget.currency] || 1;
+      budgetEur += s.budget.amount * rate;
+    }
+  });
+  var budgetHtml = '';
+  if (hasBudget) {
+    var perPerson = Math.round(budgetEur / 3);
+    budgetHtml = '<div class="plan-budget-line">'
+      + '~€' + Math.round(budgetEur).toLocaleString() + ' total'
+      + ' &nbsp;·&nbsp; ~€' + perPerson.toLocaleString() + '/person (3 pax)'
+      + ' <span style="font-size:9px;color:var(--text3)">approx.</span>'
+      + '</div>';
+  }
+
   el.innerHTML =
       '<div class="plan-stats">'
     + '<span>' + total + ' stop' + (total !== 1 ? 's' : '') + '</span>'
@@ -189,7 +210,8 @@ function updatePlanSummary() {
     + (confirmed ? '<span class="psl psl-confirmed">' + confirmed + ' confirmed</span>' : '')
     + (tentative ? '<span class="psl psl-tentative">' + tentative + ' tentative</span>' : '')
     + (dreaming  ? '<span class="psl psl-dreaming">'  + dreaming  + ' dreaming</span>'  : '')
-    + '</div>';
+    + '</div>'
+    + budgetHtml;
 }
 
 
@@ -203,8 +225,19 @@ function renderPlanList() {
   if (!el) return;
   var plan = loadPlan();
 
+  /* Show/hide view toggle based on whether there are stops */
+  var toggleEl = document.getElementById('planViewToggle');
+  if (toggleEl) toggleEl.style.display = plan.length ? '' : 'none';
+
   if (!plan.length) {
+    planViewMode = 'list';
+    switchPlanView('list');
     el.innerHTML = '<div class="plan-list-empty">No stops yet.<br>Use "+ Add stop" to build your itinerary.</div>';
+    return;
+  }
+
+  if (planViewMode === 'timeline') {
+    renderTimeline();
     return;
   }
 
@@ -326,6 +359,21 @@ function renderPlanEditor(stop, idx) {
     +   ' oninput="onPlanNoteInput(' + idx + ', \'general\', this)">'
     + escHtml(n.general || '') + '</textarea>'
 
+    /* ── Budget ── */
+    + '<div class="plan-section-lbl" style="margin-top:14px">Budget estimate</div>'
+    + '<div class="plan-field-row">'
+    +   '<input type="number" min="0" step="1" class="plan-budget-input"'
+    +     ' placeholder="0"'
+    +     ' value="' + ((stop.budget && stop.budget.amount != null) ? stop.budget.amount : '') + '"'
+    +     ' onchange="updatePlanField(' + idx + ', \'budget.amount\', this.value === \'\' ? null : +this.value)">'
+    +   '<select onchange="updatePlanField(' + idx + ', \'budget.currency\', this.value)">'
+    +     ['EUR','USD','CLP'].map(function(c) {
+            return '<option value="' + c + '"' + ((stop.budget && stop.budget.currency === c) ? ' selected' : '') + '>' + c + '</option>';
+          }).join('')
+    +   '</select>'
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--text3);margin-top:3px">Estimated total for this stop. Shown in plan summary.</div>'
+
     /* ── Remove ── */
     + '<button class="plan-remove-btn" onclick="removePlanStop(' + idx + ')">× Remove this stop</button>'
     + '</div>';
@@ -362,6 +410,9 @@ function updatePlanField(idx, field, value) {
   } else if (field.startsWith('notes.')) {
     stop.notes = stop.notes || {};
     stop.notes[field.slice(6)] = value;
+  } else if (field.startsWith('budget.')) {
+    stop.budget = stop.budget || { amount: null, currency: 'EUR' };
+    stop.budget[field.slice(7)] = value;
   } else {
     stop[field] = value;
   }
@@ -570,7 +621,8 @@ function addDestToPlan(destId) {
     nights:    null,
     status:    'tentative',
     transport: { mode: 'other', details: '' },
-    notes:     { accommodation: '', toBook: '', questions: '', general: '' }
+    notes:     { accommodation: '', toBook: '', questions: '', general: '' },
+    budget:    { amount: null, currency: 'EUR' }
   });
 
   savePlan(plan);
@@ -616,7 +668,8 @@ function addCustomPlanStop() {
     nights:    null,
     status:    'tentative',
     transport: { mode: 'other', details: '' },
-    notes:     { accommodation: '', toBook: '', questions: '', general: '' }
+    notes:     { accommodation: '', toBook: '', questions: '', general: '' },
+    budget:    { amount: null, currency: 'EUR' }
   });
 
   if (nameEl) nameEl.value = '';
@@ -674,6 +727,133 @@ function exportPlan() {
   /* Snapshot for dirty detection */
   try { localStorage.setItem(PLAN_EXPORTED_KEY, JSON.stringify(plan)); } catch(e) {}
   updatePlanDirty();
+}
+
+
+/* ────────────────────────────────────────────────────
+   EXPORT — downloads chile-trip-2026-itinerary.md
+   ──────────────────────────────────────────────────── */
+function exportPlanMarkdown() {
+  var plan = loadPlan();
+  if (!plan.length) {
+    alert('No stops in the plan yet — add some destinations first.');
+    return;
+  }
+
+  var today   = new Date();
+  var dateStr = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  /* Overview stats */
+  var confirmed = plan.filter(function(s) { return s.status === 'confirmed'; }).length;
+  var tentative = plan.filter(function(s) { return s.status === 'tentative'; }).length;
+  var dreaming  = plan.filter(function(s) { return s.status === 'dreaming';  }).length;
+  var totalNights = plan.reduce(function(n, s) { return n + (parseInt(s.nights, 10) || 0); }, 0);
+
+  /* Budget total */
+  var FX = { EUR: 1, USD: 0.92, CLP: 0.00087 };
+  var budgetEur = 0;
+  var hasBudget = false;
+  plan.forEach(function(s) {
+    if (s.budget && s.budget.amount != null && s.budget.amount > 0) {
+      hasBudget = true;
+      budgetEur += s.budget.amount * (FX[s.budget.currency] || 1);
+    }
+  });
+
+  var lines = [
+    '# 🇨🇱 Chile Trip 2026 — Full Itinerary',
+    '',
+    '*3 people · Generated: ' + dateStr + '*',
+    '',
+    '## Overview',
+    '- **' + plan.length + ' stop' + (plan.length !== 1 ? 's' : '') + '**'
+      + (totalNights ? ' · **' + totalNights + ' nights**' : ''),
+    '- Confirmed: ' + confirmed + ' · Tentative: ' + tentative + ' · Dreaming: ' + dreaming,
+  ];
+  if (hasBudget) {
+    lines.push('- Estimated budget: ~€' + Math.round(budgetEur).toLocaleString()
+      + ' total · ~€' + Math.round(budgetEur / 3).toLocaleString() + ' per person *(approx.)*');
+  }
+  lines.push('', '---', '');
+
+  /* Per-stop sections */
+  plan.forEach(function(stop, idx) {
+    var dest = stop.destId ? DESTINATIONS.find(function(x) { return x.id === stop.destId; }) : null;
+    var c    = dest ? CATS[dest.cat] : null;
+
+    /* Heading */
+    lines.push('## ' + (idx + 1) + '. ' + stop.name);
+
+    /* Date / nights / status line */
+    var meta = [];
+    if (stop.dateFrom || stop.dateTo) meta.push(_fmtRange(stop.dateFrom, stop.dateTo));
+    if (stop.nights != null && stop.nights !== '') meta.push(stop.nights + ' night' + (stop.nights !== 1 ? 's' : ''));
+    if (stop.status) meta.push(stop.status.charAt(0).toUpperCase() + stop.status.slice(1));
+    if (meta.length) lines.push('**' + meta.join(' · ') + '**');
+
+    /* Transport */
+    if (stop.transport && stop.transport.mode && stop.transport.mode !== 'other') {
+      var icons = { flight: '✈ Flight', bus: '🚌 Bus', car: '🚗 Car / rental',
+                    ferry: '⛴ Ferry', foot: '🥾 Foot / trek' };
+      var tLabel = icons[stop.transport.mode] || stop.transport.mode;
+      if (stop.transport.details) tLabel += ' — ' + stop.transport.details;
+      lines.push('*Transport from previous stop: ' + tLabel + '*');
+    }
+    lines.push('');
+
+    /* Destination info (only for known destinations) */
+    if (dest) {
+      if (c) lines.push('> **' + c.label + '** · ' + dest.sub);
+      lines.push('');
+      lines.push('### About');
+      lines.push(dest.summary);
+      lines.push('');
+      lines.push('### Highlights');
+      dest.highlights.forEach(function(h) { lines.push('- ' + h); });
+      lines.push('');
+      if (dest.tip) {
+        lines.push('### Practical tip');
+        lines.push(dest.tip);
+        lines.push('');
+      }
+      if (dest.weather) {
+        lines.push('### Nov–Dec weather');
+        lines.push(dest.weather);
+        lines.push('');
+      }
+    }
+
+    /* Plan notes */
+    var n = stop.notes || {};
+    var hasNotes = n.accommodation || n.toBook || n.questions || n.general;
+    if (hasNotes) {
+      lines.push('### Plan notes');
+      if (n.accommodation) { lines.push('**Accommodation:** ' + n.accommodation); lines.push(''); }
+      if (n.toBook)        { lines.push('**Things to book:** ' + n.toBook);        lines.push(''); }
+      if (n.questions)     { lines.push('**Open questions:** ' + n.questions);     lines.push(''); }
+      if (n.general)       { lines.push('**General notes:** ' + n.general);        lines.push(''); }
+    }
+
+    /* Budget */
+    if (stop.budget && stop.budget.amount != null && stop.budget.amount > 0) {
+      lines.push('**Budget estimate:** ' + stop.budget.amount.toLocaleString() + ' ' + stop.budget.currency);
+      lines.push('');
+    }
+
+    lines.push('---', '');
+  });
+
+  lines.push('*Generated by Chile Trip 2026 interactive planner*');
+
+  var md   = lines.join('\n');
+  var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'chile-trip-2026-itinerary.md';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
 
@@ -772,6 +952,142 @@ function showPlanRoute() {
 function hidePlanRoute() {
   planRouteOnMap = false;
   planRouteLayer.remove();
+}
+
+
+/* ────────────────────────────────────────────────────
+   TIMELINE VIEW
+   ──────────────────────────────────────────────────── */
+var planViewMode = 'list';
+
+function switchPlanView(mode) {
+  planViewMode = mode;
+  var listEl     = document.getElementById('planList');
+  var timelineEl = document.getElementById('planTimeline');
+  var btnList    = document.getElementById('pvBtnList');
+  var btnTl      = document.getElementById('pvBtnTimeline');
+
+  if (mode === 'timeline') {
+    if (listEl)     listEl.style.display     = 'none';
+    if (timelineEl) timelineEl.style.display = 'flex';
+    if (btnList)    btnList.classList.remove('on');
+    if (btnTl)      btnTl.classList.add('on');
+    renderTimeline();
+  } else {
+    if (listEl)     listEl.style.display     = '';
+    if (timelineEl) timelineEl.style.display = 'none';
+    if (btnList)    btnList.classList.add('on');
+    if (btnTl)      btnTl.classList.remove('on');
+  }
+}
+
+function _timelineDateRange(plan) {
+  var dates = [];
+  plan.forEach(function(s) {
+    if (s.dateFrom) dates.push(new Date(s.dateFrom + 'T00:00:00').getTime());
+    if (s.dateTo)   dates.push(new Date(s.dateTo   + 'T00:00:00').getTime());
+  });
+  if (!dates.length) return null;
+  var min = Math.min.apply(null, dates);
+  var max = Math.max.apply(null, dates);
+  /* Ensure at least 1 day range */
+  if (max <= min) max = min + 86400000;
+  return { min: min, max: max, totalMs: max - min };
+}
+
+function renderTimeline() {
+  var el = document.getElementById('planTimeline');
+  if (!el) return;
+  var plan = loadPlan();
+
+  if (!plan.length) {
+    el.innerHTML = '<div class="plan-list-empty">No stops yet.</div>';
+    return;
+  }
+
+  var scheduled   = plan.filter(function(s) { return s.dateFrom || s.dateTo; });
+  var unscheduled = plan.filter(function(s) { return !s.dateFrom && !s.dateTo; });
+  var range       = _timelineDateRange(scheduled.length ? plan : []);
+
+  if (!range) {
+    /* No dates at all — show as unscheduled list */
+    el.innerHTML = '<div class="plan-list-empty" style="padding:16px 18px">No stops have dates yet.<br>'
+      + 'Add dates in the List view to see the timeline.</div>';
+    return;
+  }
+
+  /* Build month gridline positions */
+  var months = [];
+  var cursor = new Date(range.min);
+  cursor.setDate(1);
+  cursor.setHours(0,0,0,0);
+  while (cursor.getTime() <= range.max + 86400000 * 5) {
+    var pct = Math.max(0, (cursor.getTime() - range.min) / range.totalMs * 100);
+    months.push({
+      pct:   pct,
+      label: cursor.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+    });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  var axisHtml = '<div class="tl-axis">'
+    + '<div style="width:130px;flex-shrink:0"></div>'
+    + '<div style="flex:1;position:relative;height:20px">'
+    + months.map(function(m) {
+        return '<span class="tl-axis-label" style="left:' + m.pct.toFixed(2) + '%">' + m.label + '</span>';
+      }).join('')
+    + '</div></div>';
+
+  var gridlinesHtml = months.map(function(m) {
+    return '<div class="tl-gridline" style="left:' + m.pct.toFixed(2) + '%"></div>';
+  }).join('');
+
+  var rowsHtml = scheduled.map(function(stop) {
+    var globalIdx = plan.indexOf(stop);
+    var color = stopColor(stop);
+    var fromMs = stop.dateFrom ? new Date(stop.dateFrom + 'T00:00:00').getTime() : range.min;
+    var toMs   = stop.dateTo   ? new Date(stop.dateTo   + 'T00:00:00').getTime() : fromMs + 86400000;
+    if (toMs <= fromMs) toMs = fromMs + 86400000;
+
+    var leftPct  = ((fromMs - range.min) / range.totalMs * 100).toFixed(2);
+    var widthPct = ((toMs - fromMs) / range.totalMs * 100).toFixed(2);
+    /* Ensure bar is at least 1.5% wide to be clickable */
+    widthPct = Math.max(1.5, parseFloat(widthPct)).toFixed(2);
+
+    return '<div class="tl-row">'
+      + '<div class="tl-row-label">'
+      +   '<span class="tl-row-num" style="background:' + color + '">' + (globalIdx + 1) + '</span>'
+      +   '<span class="tl-row-name">' + escHtml(stop.name) + '</span>'
+      + '</div>'
+      + '<div class="tl-bar-area">'
+      +   gridlinesHtml
+      +   '<div class="tl-bar" style="left:' + leftPct + '%;width:' + widthPct + '%;background:' + color + '"'
+      +     ' title="' + escHtml(stop.name) + ' · ' + _fmtRange(stop.dateFrom, stop.dateTo) + '"'
+      +     ' onclick="switchPlanView(\'list\');togglePlanStopEditor(' + globalIdx + ')">'
+      +     '<span class="tl-bar-label">' + escHtml(stop.name) + '</span>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  var unschHtml = '';
+  if (unscheduled.length) {
+    unschHtml = '<div class="tl-unscheduled">'
+      + '<div class="tl-unsch-hd">Unscheduled (' + unscheduled.length + ')</div>'
+      + unscheduled.map(function(stop) {
+          var globalIdx = plan.indexOf(stop);
+          var color = stopColor(stop);
+          return '<div class="tl-unsch-item" onclick="switchPlanView(\'list\');togglePlanStopEditor(' + globalIdx + ')">'
+            + '<span class="tl-row-num" style="background:' + color + '">' + (globalIdx + 1) + '</span>'
+            + '<span>' + escHtml(stop.name) + '</span>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  el.innerHTML = axisHtml
+    + '<div class="tl-grid">' + rowsHtml + '</div>'
+    + unschHtml;
 }
 
 
