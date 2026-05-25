@@ -8,8 +8,34 @@
 /* ────────────────────────────────────────────────────
    STORAGE
    ──────────────────────────────────────────────────── */
-var PLAN_KEY          = 'chile-trip-2026-plan';
-var PLAN_EXPORTED_KEY = 'chile-trip-2026-plan-exported';
+var PLAN_KEY            = 'chile-trip-2026-plan';
+var PLAN_EXPORTED_KEY   = 'chile-trip-2026-plan-exported';
+var TRIP_NOTES_KEY      = 'chile-trip-2026-trip-notes';
+
+function loadTripNotes() {
+  try { return localStorage.getItem(TRIP_NOTES_KEY) || ''; }
+  catch(e) { return ''; }
+}
+function saveTripNotes(text) {
+  try {
+    if (text.trim()) localStorage.setItem(TRIP_NOTES_KEY, text);
+    else             localStorage.removeItem(TRIP_NOTES_KEY);
+  } catch(e) {}
+}
+
+var _tripNotesTimer = null;
+function onTripNotesInput(el) {
+  var statusEl = document.getElementById('planTripNotesStatus');
+  if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.style.opacity = '1'; }
+  clearTimeout(_tripNotesTimer);
+  _tripNotesTimer = setTimeout(function() {
+    saveTripNotes(el.value);
+    if (statusEl) {
+      statusEl.textContent = 'Saved ✓';
+      setTimeout(function() { statusEl.style.opacity = '0'; }, 1200);
+    }
+  }, 500);
+}
 
 function loadPlan() {
   try { return JSON.parse(localStorage.getItem(PLAN_KEY)) || []; }
@@ -68,6 +94,12 @@ function switchToPlanMode() {
   document.getElementById('detailPanel').classList.remove('visible');
   document.getElementById('planPanel').style.display  = 'flex';
 
+  /* Show trip notes field and populate from storage */
+  var tripNotesWrap = document.getElementById('planTripNotes');
+  var tripNotesTa   = document.getElementById('planTripNotesTa');
+  if (tripNotesWrap) tripNotesWrap.style.display = '';
+  if (tripNotesTa)   tripNotesTa.value = loadTripNotes();
+
   if (typeof closeMobileCard === 'function') closeMobileCard();
   map.closePopup();
 
@@ -88,6 +120,9 @@ function switchToDestinationsMode() {
   var legend  = document.getElementById('sLegend');
   if (filters) filters.style.display = '';
   if (legend)  legend.style.display  = '';
+
+  var tripNotesWrap = document.getElementById('planTripNotes');
+  if (tripNotesWrap) tripNotesWrap.style.display = 'none';
 
   document.getElementById('planPanel').style.display = 'none';
   closeAddStop();
@@ -163,8 +198,15 @@ function updatePlanSummary() {
 
   var dates = plan.map(function(s) { return s.dateFrom; }).filter(Boolean).sort();
   var todos = plan.map(function(s) { return s.dateTo;   }).filter(Boolean).sort();
+
+  /* Full date range including year */
+  function _fmtDateYear(str) {
+    if (!str) return '';
+    var d = new Date(str + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
   var range = (dates.length && todos.length)
-    ? _fmtDate(dates[0]) + ' – ' + _fmtDate(todos[todos.length - 1])
+    ? _fmtDateYear(dates[0]) + ' – ' + _fmtDateYear(todos[todos.length - 1])
     : '';
 
   var nights = plan.reduce(function(n, s) { return n + (parseInt(s.nights, 10) || 0); }, 0);
@@ -199,12 +241,22 @@ function updatePlanSummary() {
       + '</div>';
   }
 
+  /* Route line — stop names joined with arrows */
+  var routeHtml = '';
+  if (plan.length) {
+    var arrow = '<span class="plan-route-arrow">→</span>';
+    routeHtml = '<div class="plan-route">'
+      + plan.map(function(s) { return escHtml(s.name); }).join(arrow)
+      + '</div>';
+  }
+
   el.innerHTML =
       '<div class="plan-stats">'
     + '<span>' + total + ' stop' + (total !== 1 ? 's' : '') + '</span>'
     + (range  ? '<span>' + range  + '</span>' : '')
     + (nights ? '<span>' + nights + ' night' + (nights !== 1 ? 's' : '') + '</span>' : '')
     + '</div>'
+    + routeHtml
     + barHtml
     + '<div class="plan-status-legend">'
     + (confirmed ? '<span class="psl psl-confirmed">' + confirmed + ' confirmed</span>' : '')
@@ -760,20 +812,53 @@ function exportPlanMarkdown() {
     }
   });
 
+  /* Date range with year */
+  var allFrom = plan.map(function(s) { return s.dateFrom; }).filter(Boolean).sort();
+  var allTo   = plan.map(function(s) { return s.dateTo;   }).filter(Boolean).sort();
+  function _fmtDateFull(str) {
+    if (!str) return '';
+    var d = new Date(str + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  var fullRange = (allFrom.length && allTo.length)
+    ? _fmtDateFull(allFrom[0]) + ' – ' + _fmtDateFull(allTo[allTo.length - 1])
+    : '';
+
+  /* Route string */
+  var routeStr = plan.map(function(s) { return s.name; }).join(' → ');
+
+  /* Trip-level notes */
+  var tripNotes = loadTripNotes();
+
   var lines = [
     '# 🇨🇱 Chile Trip 2026 — Full Itinerary',
     '',
     '*3 people · Generated: ' + dateStr + '*',
     '',
     '## Overview',
+  ];
+
+  if (fullRange) lines.push('**' + fullRange + '**');
+  lines.push(
     '- **' + plan.length + ' stop' + (plan.length !== 1 ? 's' : '') + '**'
       + (totalNights ? ' · **' + totalNights + ' nights**' : ''),
-    '- Confirmed: ' + confirmed + ' · Tentative: ' + tentative + ' · Dreaming: ' + dreaming,
-  ];
+    '- Confirmed: ' + confirmed + ' · Tentative: ' + tentative + ' · Dreaming: ' + dreaming
+  );
   if (hasBudget) {
     lines.push('- Estimated budget: ~€' + Math.round(budgetEur).toLocaleString()
       + ' total · ~€' + Math.round(budgetEur / 3).toLocaleString() + ' per person *(approx.)*');
   }
+
+  if (routeStr) {
+    lines.push('', '**Route**');
+    lines.push(routeStr);
+  }
+
+  if (tripNotes.trim()) {
+    lines.push('', '### Trip notes');
+    lines.push(tripNotes.trim());
+  }
+
   lines.push('', '---', '');
 
   /* Per-stop sections */
