@@ -1,6 +1,6 @@
 // ─── PLAN DATA ──────────────────────────────────────────────────────────────
 // Chile Trip 2026 — Committed itinerary.
-// Generated: 2026-05-25 · 10 stops
+// Generated: 2026-07-01 · 11 stops
 // To update: Plan tab → Export plan_data.js → replace this file → commit.
 
 var PLAN_DATA = [
@@ -11,8 +11,8 @@ var PLAN_DATA = [
     "lat": -33.4489,
     "lng": -70.6693,
     "dateFrom": "2026-11-01",
-    "dateTo": "2026-11-01",
-    "nights": 0,
+    "dateTo": "2026-11-03",
+    "nights": 2,
     "status": "confirmed",
     "transport": {
       "mode": "flight",
@@ -31,9 +31,9 @@ var PLAN_DATA = [
     "sub": "",
     "lat": -22.9087,
     "lng": -68.1997,
-    "dateFrom": "2026-11-02",
-    "dateTo": "2026-11-09",
-    "nights": 7,
+    "dateFrom": "2026-11-03",
+    "dateTo": "2026-11-12",
+    "nights": 9,
     "status": "tentative",
     "transport": {
       "mode": "flight",
@@ -52,9 +52,9 @@ var PLAN_DATA = [
     "sub": "",
     "lat": -33.4489,
     "lng": -70.6693,
-    "dateFrom": "2026-11-09",
-    "dateTo": "2026-11-09",
-    "nights": 0,
+    "dateFrom": "2026-11-12",
+    "dateTo": "2026-11-13",
+    "nights": 1,
     "status": "tentative",
     "transport": {
       "mode": "flight",
@@ -73,8 +73,8 @@ var PLAN_DATA = [
     "sub": "",
     "lat": -34.4358,
     "lng": -71.0878,
-    "dateFrom": "2026-11-09",
-    "dateTo": "2026-11-11",
+    "dateFrom": "2026-11-14",
+    "dateTo": "2026-11-16",
     "nights": 2,
     "status": "tentative",
     "transport": {
@@ -89,34 +89,13 @@ var PLAN_DATA = [
     }
   },
   {
-    "destId": "santiago",
-    "name": "Santiago",
-    "sub": "",
-    "lat": -33.4489,
-    "lng": -70.6693,
-    "dateFrom": "2026-11-11",
-    "dateTo": "2026-11-14",
-    "nights": 3,
-    "status": "tentative",
-    "transport": {
-      "mode": "other",
-      "details": ""
-    },
-    "notes": {
-      "accommodation": "Hier brauchen wir etwas Platz und es muss in der Naehe von Tina sein.",
-      "toBook": "Unterkunft",
-      "questions": "",
-      "general": ""
-    }
-  },
-  {
     "destId": "villarrica",
     "name": "Villarrica / Pucón",
     "sub": "",
     "lat": -39.2737,
     "lng": -71.958,
-    "dateFrom": "2026-11-14",
-    "dateTo": "2026-11-21",
+    "dateFrom": "2026-11-16",
+    "dateTo": "2026-11-23",
     "nights": 7,
     "status": "tentative",
     "transport": {
@@ -136,9 +115,9 @@ var PLAN_DATA = [
     "sub": "",
     "lat": -41.3167,
     "lng": -72.25,
-    "dateFrom": "2026-11-21",
+    "dateFrom": "2026-11-23",
     "dateTo": "2026-11-28",
-    "nights": 7,
+    "nights": 5,
     "status": "tentative",
     "transport": {
       "mode": "other",
@@ -157,9 +136,9 @@ var PLAN_DATA = [
     "sub": "",
     "lat": -42.4817,
     "lng": -73.7638,
-    "dateFrom": "2026-11-28",
+    "dateFrom": "2026-11-29",
     "dateTo": "2026-12-04",
-    "nights": 6,
+    "nights": 5,
     "status": "tentative",
     "transport": {
       "mode": "other",
@@ -173,14 +152,39 @@ var PLAN_DATA = [
     }
   },
   {
+    "destId": "pumalin",
+    "name": "Pumalín Douglas Tompkins NP",
+    "sub": "",
+    "lat": -42.7,
+    "lng": -72.6,
+    "dateFrom": "2026-12-06",
+    "dateTo": "2026-12-09",
+    "nights": 3,
+    "status": "tentative",
+    "transport": {
+      "mode": "other",
+      "details": ""
+    },
+    "notes": {
+      "accommodation": "",
+      "toBook": "",
+      "questions": "",
+      "general": ""
+    },
+    "budget": {
+      "amount": null,
+      "currency": "EUR"
+    }
+  },
+  {
     "destId": "el-chalten",
     "name": "El Chaltén",
     "sub": "",
     "lat": -49.3314,
     "lng": -72.8856,
-    "dateFrom": "2026-12-04",
+    "dateFrom": "2026-12-09",
     "dateTo": "2026-12-18",
-    "nights": 14,
+    "nights": 9,
     "status": "tentative",
     "transport": {
       "mode": "bus",
@@ -191,6 +195,31 @@ var PLAN_DATA = [
       "toBook": "",
       "questions": "",
       "general": ""
+    }
+  },
+  {
+    "destId": "castillo",
+    "name": "Cerro Castillo NP",
+    "sub": "",
+    "lat": -46.1071,
+    "lng": -72.1447,
+    "dateFrom": "2026-12-09",
+    "dateTo": "2026-12-18",
+    "nights": 9,
+    "status": "tentative",
+    "transport": {
+      "mode": "other",
+      "details": ""
+    },
+    "notes": {
+      "accommodation": "",
+      "toBook": "",
+      "questions": "",
+      "general": ""
+    },
+    "budget": {
+      "amount": null,
+      "currency": "EUR"
     }
   },
   {
