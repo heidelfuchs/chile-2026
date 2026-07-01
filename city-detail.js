@@ -214,7 +214,7 @@ function showCityDetailPoi(id) {
       '<div class="d-name" style="color:' + cfg.color + '">' + escHtml(poi.name) + '</div>'
     + '<div class="d-sub">' + escHtml(poi.sub || '') + '</div>'
     + '<span class="d-badge" style="background:' + cfg.bg + ';color:' + cfg.fg + '">'
-    +   cfg.label + ' · Santiago'
+    +   cfg.label + (entry.city.city ? ' · ' + escHtml(entry.city.city) : '')
     + '</span>'
     + metaHtml
     + '<div class="d-summary">' + escHtml(poi.summary) + '</div>'

@@ -241,7 +241,7 @@ DESTINATIONS.push(
   },
 
   {
-    id: 'arica',
+    id: 'arica-chinchorro',
     name: 'Arica & the Chinchorro Mummies',
     cat: 'claude',
     sub: 'Arica y Parinacota · World\'s oldest mummies — UNESCO 2021',

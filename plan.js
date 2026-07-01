@@ -953,8 +953,11 @@ function importPlan(event) {
   reader.onload = function(e) {
     try {
       var text  = e.target.result;
-      /* Extract the array literal from "var PLAN_DATA = [...];" */
-      var match = text.match(/var\s+PLAN_DATA\s*=\s*(\[[\s\S]*?\]);/);
+      /* Extract the array literal from "var PLAN_DATA = [...];"
+         Greedy match anchored to the end of the file — exportPlan() always
+         writes PLAN_DATA as the final statement, so this is safe even when
+         a note field happens to contain the literal text "];" */
+      var match = text.match(/var\s+PLAN_DATA\s*=\s*(\[[\s\S]*\]);\s*$/);
       if (!match) throw new Error('Could not find PLAN_DATA array in file.');
       var data  = JSON.parse(match[1]);
       if (!Array.isArray(data)) throw new Error('PLAN_DATA must be an array.');
