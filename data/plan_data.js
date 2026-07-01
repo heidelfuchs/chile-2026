@@ -228,9 +228,9 @@ var PLAN_DATA = [
     "sub": "",
     "lat": -33.4489,
     "lng": -70.6693,
-    "dateFrom": "2026-12-24",
+    "dateFrom": "2026-12-18",
     "dateTo": "2026-12-31",
-    "nights": 7,
+    "nights": 13,
     "status": "confirmed",
     "transport": {
       "mode": "other",
