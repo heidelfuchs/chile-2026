@@ -1,6 +1,6 @@
 // ─── PLAN DATA ──────────────────────────────────────────────────────────────
 // Chile Trip 2026 — Committed itinerary.
-// Generated: 2026-07-01 · 11 stops
+// Generated: 2026-07-02 · 11 stops
 // To update: Plan tab → Export plan_data.js → replace this file → commit.
 
 var PLAN_DATA = [
