@@ -1183,16 +1183,28 @@ function renderTimeline() {
    INIT
    ──────────────────────────────────────────────────── */
 function initPlan() {
-  /* If localStorage is empty but a committed plan exists, seed from it */
-  var stored = loadPlan();
-  if (!stored.length) {
-    var committed = (typeof PLAN_DATA !== 'undefined' && Array.isArray(PLAN_DATA)) ? PLAN_DATA : [];
-    if (committed.length) {
-      savePlan(committed);
-      /* Treat committed file as the export baseline */
-      try { localStorage.setItem(PLAN_EXPORTED_KEY, JSON.stringify(committed)); } catch(e) {}
-    }
+  var stored    = loadPlan();
+  var committed = (typeof PLAN_DATA !== 'undefined' && Array.isArray(PLAN_DATA)) ? PLAN_DATA : [];
+
+  /* Adopt the committed file when:
+     - this browser has no local plan yet (first visit / cleared storage), or
+     - the local plan is just an untouched mirror of an earlier publish
+       (i.e. not dirty) and the committed file has since moved on.
+     We deliberately do NOT overwrite when the local plan has unpublished
+     edits (isPlanDirty() === true) — that would silently discard notes
+     the user hasn't exported yet. This is what previously caused newly
+     pushed stops to never show up on a browser that already had an older
+     plan cached: it only ever seeded once, on a completely empty plan. */
+  var isStale = stored.length
+    && !isPlanDirty()
+    && JSON.stringify(stored) !== JSON.stringify(committed);
+
+  if ((!stored.length || isStale) && committed.length) {
+    savePlan(committed);
+    /* Treat committed file as the export baseline */
+    try { localStorage.setItem(PLAN_EXPORTED_KEY, JSON.stringify(committed)); } catch(e) {}
   }
+
   updatePlanDirty();
 }
 
